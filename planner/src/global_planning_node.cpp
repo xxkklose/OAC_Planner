@@ -246,7 +246,7 @@ int main(int argc, char** argv)
   tree_vis_pub = nh.advertise<visualization_msgs::Marker>("tree_vis", 1);
   tree_tra_pub = nh.advertise<std_msgs::Float32MultiArray>("tree_tra", 1);
   path_interpolation_pub = nh.advertise<std_msgs::Float32MultiArray>("global_path", 1000);
-  pose_pub_to_control = nh.advertise<geometry_msgs::PoseStamped>("robot_pose", 1);
+  pose_pub_to_control = nh.advertise<geometry_msgs::PoseStamped>("robot_pose", 40);
 
   nh.param("map/resolution", resolution, 0.1);
 
