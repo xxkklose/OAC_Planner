@@ -307,9 +307,9 @@ int main(int argc, char** argv)
     geometry_msgs::PoseStamped pose_msg;
     pose_msg.header.stamp = ros::Time::now();
     pose_msg.header.frame_id = "camera_init";
-    pose_msg.pose.position.x = transform.getOrigin().x();
+    pose_msg.pose.position.x = transform.getOrigin().x() - -0.17193;
     pose_msg.pose.position.y = transform.getOrigin().y();
-    pose_msg.pose.position.z = transform.getOrigin().z();
+    pose_msg.pose.position.z = transform.getOrigin().z() - 0.13942;
     pose_msg.pose.orientation.w = transform.getRotation().getW();
     pose_msg.pose.orientation.x = transform.getRotation().getX();
     pose_msg.pose.orientation.y = transform.getRotation().getY();

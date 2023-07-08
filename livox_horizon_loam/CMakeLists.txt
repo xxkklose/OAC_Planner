@@ -4,7 +4,6 @@ project(loam_horizon)
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++14 -fext-numeric-literals")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -Wall -g")
-set(octomap_DIR "/opt/ros/noetic/share/octomap")
 
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
@@ -18,26 +17,30 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   tf
   livox_ros_driver
-  octomap
 )
 
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Ceres REQUIRED)
+set(octomap_DIR "/home/beihang705/catkin_horizon_loam/src/livox_horizon_loam/src/cmake_moduals")
+find_package(octomap REQUIRED)
+
+# message(${OCTOMAP_LIBS})
 
 include_directories(
   include
-  # src/octomap/octomap
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${CERES_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS})
+  ${OpenCV_INCLUDE_DIRS}
+  # ${OCTOMAP_LIBRARIES}
+  )
 
 
 catkin_package(
   CATKIN_DEPENDS geometry_msgs nav_msgs roscpp rospy std_msgs livox_ros_driver
-  DEPENDS EIGEN3 PCL 
+  DEPENDS EIGEN3 PCL octomap
   INCLUDE_DIRS include
 )
 
@@ -54,10 +57,11 @@ target_link_libraries(laserMapping ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_
 add_executable(livox_repub src/livox_repub.cpp)
 target_link_libraries(livox_repub ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
+add_executable(savePointCloud src/savePointCloud.cpp)
+target_link_libraries(savePointCloud ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
+
 add_executable(imu_process src/imu_processor/data_process_node.cpp src/imu_processor/data_process.cpp
                            src/imu_processor/gyr_int.cpp )
 target_link_libraries(imu_process ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable(pointCloudProcess src/pointCloudProcess.cpp )
-target_link_libraries(pointCloudProcess ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 

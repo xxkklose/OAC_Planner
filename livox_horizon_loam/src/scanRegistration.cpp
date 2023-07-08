@@ -34,7 +34,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include <nav_msgs/Odometry.h>
-#include <opencv2/opencv.hpp>
+#include<opencv2/core/core.hpp>
+#include<opencv2/features2d/features2d.hpp>
+
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_cloud.h>
@@ -355,6 +357,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {
     point.curvature = laserCloudIn.points[i].curvature;
     int scanID = 0;
     if (N_SCANS == 6) {
+      // ROS_INFO("point.intensity: %lf", point.intensity); // intensity -> N_SCANS 6
       scanID = (int)point.intensity;
     }
     laserCloudScans[scanID].push_back(point);
@@ -365,11 +368,10 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {
 
   pcl::PointCloud<PointType>::Ptr laserCloud(new pcl::PointCloud<PointType>());
   for (int i = 0; i < N_SCANS; i++) {
-    scanStartInd[i] = laserCloud->size() + 5;
+    scanStartInd[i] = laserCloud->size() + 5;  //
     *laserCloud += laserCloudScans[i];
-    scanEndInd[i] = laserCloud->size() - 6;
-    // ROS_INFO("scan %d start-end [%d, %d]", i, scanStartInd[i],
-    // scanEndInd[i]);
+    scanEndInd[i] = laserCloud->size() - 6; //
+    ROS_INFO("scan %d start-end [%d, %d]", i, scanStartInd[i], scanEndInd[i]);
   }
 
   printf("prepare time %f \n", t_prepare.toc());
@@ -725,7 +727,6 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  //接收
   ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>(
       "/livox_undistort", 100, laserCloudHandler);
 

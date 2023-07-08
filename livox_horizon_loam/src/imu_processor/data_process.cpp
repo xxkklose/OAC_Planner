@@ -136,7 +136,7 @@ void ImuProcess::Process(const MeasureGroup &meas) {
     sensor_msgs::PointCloud2 pcl_out_msg;
     pcl::toROSMsg(*laserCloudtmp, pcl_out_msg);
     pcl_out_msg.header = pcl_in_msg->header;
-    pcl_out_msg.header.frame_id = "camera_init";
+    pcl_out_msg.header.frame_id = "/camera_init";
     pub_UndistortPcl.publish(pcl_out_msg);
     laserCloudtmp->clear();
   }
@@ -147,7 +147,7 @@ void ImuProcess::Process(const MeasureGroup &meas) {
     sensor_msgs::PointCloud2 pcl_out_msg;
     pcl::toROSMsg(*cur_pcl_un_, pcl_out_msg);
     pcl_out_msg.header = pcl_in_msg->header;
-    pcl_out_msg.header.frame_id = "camera_init";
+    pcl_out_msg.header.frame_id = "/camera_init";
     pub_UndistortPcl.publish(pcl_out_msg);
   }
 
@@ -157,7 +157,7 @@ void ImuProcess::Process(const MeasureGroup &meas) {
     sensor_msgs::PointCloud2 pcl_out_msg;
     pcl::toROSMsg(*cur_pcl_in_, pcl_out_msg);
     pcl_out_msg.header = pcl_in_msg->header;
-    pcl_out_msg.header.frame_id = "camera_init";
+    pcl_out_msg.header.frame_id = "/camera_init";
     pub_UndistortPcl.publish(pcl_out_msg);
   }
 

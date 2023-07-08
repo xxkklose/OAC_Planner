@@ -24,7 +24,7 @@
     <node pkg="loam_horizon" type="livox_repub" name="livox_repub" output="screen" />
 
     <node pkg="loam_horizon" type="imu_process" name="imu_process" output="screen" >
-         <!--<remap from="/imu" to="/livox/imu"/>-->
+         <remap from="/imu" to="/livox/imu"/>
     </node>
 
 

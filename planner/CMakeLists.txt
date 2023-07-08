@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
   roscpp
-  rviz_visual_tools
+  # rviz_visual_tools
   std_msgs
   tf
 )

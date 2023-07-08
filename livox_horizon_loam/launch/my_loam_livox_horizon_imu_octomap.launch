@@ -25,12 +25,12 @@
          <remap from="/imu" to="/livox/imu"/>
     </node>
 
-    <!-- <node pkg="loam_horizon" type="pcl2octomap" name="pcl2octomap" output="screen" /> -->
+    <node pkg="loam_horizon" type="pcl2octomap" name="pcl2octomap" output="screen" />
 
 
     <arg name="rviz" default="true" />
     <group if="$(arg rviz)">
-        <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find loam_horizon)/rviz_cfg/loam_horizon.rviz" />
+        <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find loam_horizon)/rviz_cfg/loam_horizon1.rviz" />
     </group>
 
 </launch>

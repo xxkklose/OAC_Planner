@@ -14,7 +14,7 @@ void transformCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     // ROS_INFO("pcl2octomap shows: %d", msg->height);
     pcl::fromROSMsg(*msg, *cloud);
 
-    octomap::OcTree octree(0.03);
+    octomap::OcTree octree(0.05);
 
     for (pcl::PointCloud<pcl::PointXYZ>::iterator it = cloud->begin(); it != cloud->end(); ++it)
     {
@@ -31,7 +31,7 @@ void transformCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     outmsg.header.stamp = msg->header.stamp;
     outmsg.header.frame_id = msg->header.frame_id;
     transform_pub.publish(outmsg);
-
+    
 }
 
 
