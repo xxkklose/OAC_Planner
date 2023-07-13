@@ -243,8 +243,8 @@ int main(int argc, char** argv)
   path_vis_pub = nh.advertise<visualization_msgs::Marker>("path_vis", 20);
   goal_vis_pub = nh.advertise<visualization_msgs::Marker>("goal_vis", 1);
   surf_vis_pub = nh.advertise<sensor_msgs::PointCloud2>("surf_vis", 100);
-  tree_vis_pub = nh.advertise<visualization_msgs::Marker>("tree_vis", 1);
-  tree_tra_pub = nh.advertise<std_msgs::Float32MultiArray>("tree_tra", 1);
+  tree_vis_pub = nh.advertise<visualization_msgs::Marker>("tree_vis", 40);
+  tree_tra_pub = nh.advertise<std_msgs::Float32MultiArray>("tree_tra", 40);
   path_interpolation_pub = nh.advertise<std_msgs::Float32MultiArray>("global_path", 1000);
   pose_pub_to_control = nh.advertise<geometry_msgs::PoseStamped>("robot_pose", 40);
 
@@ -307,9 +307,11 @@ int main(int argc, char** argv)
     geometry_msgs::PoseStamped pose_msg;
     pose_msg.header.stamp = ros::Time::now();
     pose_msg.header.frame_id = "camera_init";
-    pose_msg.pose.position.x = transform.getOrigin().x() - -0.17193;
+    // pose_msg.pose.position.x = transform.getOrigin().x() - 0.17193;
+    pose_msg.pose.position.x = transform.getOrigin().x();
     pose_msg.pose.position.y = transform.getOrigin().y();
-    pose_msg.pose.position.z = transform.getOrigin().z() - 0.13942;
+    // pose_msg.pose.position.z = transform.getOrigin().z() - 0.13942;
+    pose_msg.pose.position.z = transform.getOrigin().z();
     pose_msg.pose.orientation.w = transform.getRotation().getW();
     pose_msg.pose.orientation.x = transform.getRotation().getX();
     pose_msg.pose.orientation.y = transform.getRotation().getY();

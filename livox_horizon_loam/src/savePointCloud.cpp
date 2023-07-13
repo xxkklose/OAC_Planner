@@ -32,9 +32,9 @@ void originCallBack(const sensor_msgs::PointCloud2ConstPtr& msg){
       }
     }
     ROS_WARN("here");
-    std::cout<< transform.getOrigin().x() <<std::endl;
-    std::cout<< transform.getOrigin().y() <<std::endl;
-    std::cout<< transform.getOrigin().z() <<std::endl;
+    // std::cout<< transform.getOrigin().x() <<std::endl;
+    // std::cout<< transform.getOrigin().y() <<std::endl;
+    // std::cout<< transform.getOrigin().z() <<std::endl;
     double z_threshold = transform.getOrigin().z();
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PassThrough<pcl::PointXYZ> pass;
@@ -68,8 +68,5 @@ int main(int argc, char **argv)
     pub_total = nh.advertise<sensor_msgs::PointCloud2>("livox_total_point", 1);
 
     ros::spin();
-    while(ros::ok()){
-        ros::spinOnce();
-    }
     return 0;
 }
