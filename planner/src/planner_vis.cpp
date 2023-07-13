@@ -1,6 +1,8 @@
 #include "planner_vis.h"
 #include <visualization_msgs/Marker.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <fstream>
+#include <algorithm>
 
 using namespace OAC;
 using namespace Eigen;
@@ -120,7 +122,7 @@ void visOriginAndGoal(const vector<Node*>& nodes, Publisher* origin_and_goal_vis
   origin_and_goal_vis_pub->publish(Sphere);
 }
 
-void visPath(const vector<Node*>& solution, Publisher* path_vis_pub)
+void visPath(const vector<Node*>& solution, Publisher* path_vis_pub, const Eigen::Vector3d &start_pt)
 {
   if (path_vis_pub == NULL)
     return;
@@ -145,6 +147,8 @@ void visPath(const vector<Node*>& solution, Publisher* path_vis_pub)
   Points.color.g = Points.color.a = 1.0f;
   Line.color.b = Line.color.a = 1.0f;
   Frame.color.g = Frame.color.b = Frame.color.a = 1.0f;
+  std::ofstream output;
+  output.open("/home/parallels/1.txt", std::ios::app);
 
   if (solution.size() > 1)
   {
@@ -156,6 +160,17 @@ void visPath(const vector<Node*>& solution, Publisher* path_vis_pub)
       pts.push_back(node->position_);
       pts_tra.push_back(node->plane_->traversability);
     }
+    pts.push_back(start_pt);
+    std::reverse(pts.begin(), pts.end());
+
+    for (size_t i = 0; i < pts.size(); i++)
+    {
+      if(output.is_open()){
+        output << "第"<<i + 1<<"个点： " << pts[i] <<std::endl;
+      }
+    }
+    
+    output.close();
 
     geometry_msgs::Point pt;
     for (const auto& coord : pts)
@@ -183,6 +198,10 @@ void visPath(const vector<Node*>& solution, Publisher* path_vis_pub)
       Quaterniond quaternion(R);
       orientations.push_back(quaternion);
     }
+    Quaterniond q_start(0,0,0,1);
+    orientations.push_back(q_start);
+    std::reverse(orientations.begin(), orientations.end());
+
     // make frame
     vector<Vector4d> frame_list = generateFrame(pts, pts_tra, orientations);
     for (const auto& coord : frame_list)

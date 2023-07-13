@@ -4,6 +4,7 @@
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Path.h>
 #include <std_msgs/Float32MultiArray.h>
+#include <fstream>
 
 using namespace std;
 using namespace std_msgs;
@@ -16,6 +17,7 @@ namespace backward
 {
 backward::SignalHandling sh;
 }
+std::ofstream outputFile;
 
 // ros related
 ros::Subscriber map_sub, wp_sub;
@@ -172,7 +174,7 @@ void findSolution()
   printf("=========================================================================\n");
 
   pubInterpolatedPath(solution.nodes_, &path_interpolation_pub);
-  visPath(solution.nodes_, &path_vis_pub);
+  visPath(solution.nodes_, &path_vis_pub, start_pt);
   visSurf(solution.nodes_, &surf_vis_pub);
 
   // When the PF-RRT* generates a short enough global path,it's considered that the robot has
@@ -181,12 +183,12 @@ void findSolution()
   {
     has_goal = false;
     visOriginAndGoal({}, &goal_vis_pub);  // Passing an empty set to delete the previous display
-    visPath({}, &path_vis_pub);
+    visPath({}, &path_vis_pub, start_pt);
     ROS_INFO("The Robot has achieved the goal!!!");
   }
 
   if (solution.type_ == Path::Empty)
-    visPath({}, &path_vis_pub);
+    visPath({}, &path_vis_pub, start_pt);
 }
 
 /**
@@ -291,6 +293,7 @@ int main(int argc, char** argv)
 
     // Update the position of the origin
     tf::StampedTransform transform;
+
     while (true && ros::ok())
     {
       try
@@ -316,6 +319,14 @@ int main(int argc, char** argv)
     pose_msg.pose.orientation.x = transform.getRotation().getX();
     pose_msg.pose.orientation.y = transform.getRotation().getY();
     pose_msg.pose.orientation.z = transform.getRotation().getZ();
+
+    outputFile.open("/home/parallels/1.txt", std::ios::app);
+    if(outputFile.is_open()){
+      // outputFile << "start_pt： x " << start_pt.x << " | y " << start_pt.y << " | z " << start_pt.z << std::endl;
+      outputFile << "start_pt：  " << start_pt << std::endl;
+      outputFile << "pose_msg.pose.position.x " << pose_msg.pose.position.x<< " | y " << pose_msg.pose.position.y << " | z " << pose_msg.pose.position.z << std::endl;
+    }
+    outputFile.close();
 
     pose_pub_to_control.publish(pose_msg);
 
