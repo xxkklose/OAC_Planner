@@ -4,12 +4,12 @@
  *  Date: 2021-7-27
  */
 
-#ifndef PUTN_VIS_H
-#define PUTN_VIS_H
+#ifndef OAC_VIS_H
+#define OAC_VIS_H
 
 #include "planner_classes.h"
 
-namespace PUTN
+namespace OAC
 {
 namespace visualization
 {

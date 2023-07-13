@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "livox_repub");
   ros::NodeHandle nh;
 
-  ROS_INFO("start livox_repub");
+  // ROS_INFO("start livox_repub");
 
   ros::Subscriber sub_livox_msg1 = nh.subscribe<livox_ros_driver::CustomMsg>(
       "/livox/lidar", 100, LivoxMsgCbk1);

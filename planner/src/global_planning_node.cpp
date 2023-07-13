@@ -8,9 +8,9 @@
 using namespace std;
 using namespace std_msgs;
 using namespace Eigen;
-using namespace PUTN;
-using namespace PUTN::visualization;
-using namespace PUTN::planner;
+using namespace OAC;
+using namespace OAC::visualization;
+using namespace OAC::planner;
 
 namespace backward
 {
@@ -209,14 +209,14 @@ void callPlanner()
     timeval end;
     gettimeofday(&end, NULL);
     init_time_cost = 1000 * (end.tv_sec - start.tv_sec) + 0.001 * (end.tv_usec - start.tv_usec);
-    if (pf_rrt_star->state() == WithoutGoal)
+    if (pf_rrt_star->state() == WithoutGoal && (int)(pf_rrt_star->tree().size() < 3000))
     {
       int max_iter = 550;
       double max_time = 100.0;
       pf_rrt_star->planner(max_iter, max_time);
       ROS_INFO("Current size of tree: %d", (int)(pf_rrt_star->tree().size()));
     }
-    else
+    else if(pf_rrt_star->state() != WithoutGoal)
       ROS_WARN("The start point can't be projected,unable to execute PF-RRT* algorithm");
   }
   // If there is a specified moving target,call PF-RRT* to find a solution
@@ -240,7 +240,7 @@ int main(int argc, char** argv)
   wp_sub = nh.subscribe("waypoints", 1, rcvWaypointsCallback);
 
   grid_map_vis_pub = nh.advertise<sensor_msgs::PointCloud2>("grid_map_vis", 1);
-  path_vis_pub = nh.advertise<visualization_msgs::Marker>("path_vis", 20);
+  path_vis_pub = nh.advertise<visualization_msgs::Marker>("path_vis", 40);
   goal_vis_pub = nh.advertise<visualization_msgs::Marker>("goal_vis", 1);
   surf_vis_pub = nh.advertise<sensor_msgs::PointCloud2>("surf_vis", 100);
   tree_vis_pub = nh.advertise<visualization_msgs::Marker>("tree_vis", 40);
@@ -252,7 +252,7 @@ int main(int argc, char** argv)
 
   nh.param("planning/goal_thre", goal_thre, 1.0);
   nh.param("planning/step_size", step_size, 0.2);
-  nh.param("planning/h_surf_car", h_surf_car, 0.4);
+  nh.param("planning/h_surf_car", h_surf_car, 0.1);
   nh.param("planning/neighbor_radius", neighbor_radius, 1.0);
 
   nh.param("planning/w_fit_plane", fit_plane_arg.w_total_, 0.4);

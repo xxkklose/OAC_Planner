@@ -300,10 +300,10 @@ void process() {
       if (timeLaserCloudCornerLast != timeLaserOdometry ||
           timeLaserCloudSurfLast != timeLaserOdometry ||
           timeLaserCloudFullRes != timeLaserOdometry) {
-        printf("time corner %f surf %f full %f odom %f \n",
-               timeLaserCloudCornerLast, timeLaserCloudSurfLast,
-               timeLaserCloudFullRes, timeLaserOdometry);
-        printf("unsync messeage!");
+        // printff("time corner %f surf %f full %f odom %f \n",
+              //  timeLaserCloudCornerLast, timeLaserCloudSurfLast,
+              //  timeLaserCloudFullRes, timeLaserOdometry);
+        // printff("unsync messeage!");
         mBuf.unlock();
         break;
       }
@@ -331,7 +331,7 @@ void process() {
 
       //      while (!cornerLastBuf.empty()) {
       //        //cornerLastBuf.pop();
-      //        printf("drop lidar frame in mapping for real time performance
+      //        // printff("drop lidar frame in mapping for real time performance
       //        \n");
       //      }
 
@@ -607,15 +607,15 @@ void process() {
       downSizeFilterSurf.filter(*laserCloudSurfStack);
       int laserCloudSurfStackNum = laserCloudSurfStack->points.size();
 
-      printf("map prepare time %f ms\n", t_shift.toc());
-      printf("map corner num %d  surf num %d \n", laserCloudCornerFromMapNum,
-             laserCloudSurfFromMapNum);
+      // printff("map prepare time %f ms\n", t_shift.toc());
+      // printff("map corner num %d  surf num %d \n", laserCloudCornerFromMapNum,
+            //  laserCloudSurfFromMapNum);
       if (laserCloudCornerFromMapNum > 10 && laserCloudSurfFromMapNum > 50) {
         TicToc t_opt;
         TicToc t_tree;
         kdtreeCornerFromMap->setInputCloud(laserCloudCornerFromMap);
         kdtreeSurfFromMap->setInputCloud(laserCloudSurfFromMap);
-        printf("build tree time %f ms \n", t_tree.toc());
+        // printff("build tree time %f ms \n", t_tree.toc());
 
         for (int iterCount = 0; iterCount < 2; iterCount++) {
           // ceres::LossFunction *loss_function = NULL;
@@ -721,7 +721,7 @@ void process() {
                     laserCloudSurfFromMap->points[pointSearchInd[j]].y;
                 matA0(j, 2) =
                     laserCloudSurfFromMap->points[pointSearchInd[j]].z;
-                // printf(" pts %f %f %f ", matA0(j, 0), matA0(j, 1), matA0(j,
+                // // printff(" pts %f %f %f ", matA0(j, 0), matA0(j, 1), matA0(j,
                 // 2));
               }
               // find the norm of plane
@@ -778,12 +778,12 @@ void process() {
             */
           }
 
-          // printf("corner num %d used corner num %d \n",
+          // // printff("corner num %d used corner num %d \n",
           // laserCloudCornerStackNum, corner_num);
-          // printf("surf num %d used surf num %d \n", laserCloudSurfStackNum,
+          // // printff("surf num %d used surf num %d \n", laserCloudSurfStackNum,
           // surf_num);
 
-          printf("mapping data assosiation time %f ms \n", t_data.toc());
+          // printff("mapping data assosiation time %f ms \n", t_data.toc());
 
           TicToc t_solver;
           ceres::Solver::Options options;
@@ -794,18 +794,18 @@ void process() {
           options.gradient_check_relative_precision = 1e-4;
           ceres::Solver::Summary summary;
           ceres::Solve(options, &problem, &summary);
-          printf("mapping solver time %f ms \n", t_solver.toc());
+          // printff("mapping solver time %f ms \n", t_solver.toc());
           std::cout << summary.BriefReport() << std::endl;
-          // printf("time %f \n", timeLaserOdometry);
-          // printf("corner factor num %d surf factor num %d\n", corner_num,
+          // // printff("time %f \n", timeLaserOdometry);
+          // // printff("corner factor num %d surf factor num %d\n", corner_num,
           // surf_num);
-          // printf("result q %f %f %f %f result t %f %f %f\n", parameters[3],
+          // // printff("result q %f %f %f %f result t %f %f %f\n", parameters[3],
           // parameters[0], parameters[1], parameters[2],
           //	   parameters[4], parameters[5], parameters[6]);
         }
-        printf("mapping optimization time %f \n", t_opt.toc());
+        // printff("mapping optimization time %f \n", t_opt.toc());
       } else {
-        ROS_WARN("time Map corner and surf num are not enough");
+        // ROS_WARN("time Map corner and surf num are not enough");
       }
       transformUpdate();
 
@@ -847,7 +847,7 @@ void process() {
           laserCloudSurfArray[cubeInd]->push_back(pointSel);
         }
       }
-      printf("add points time %f ms\n", t_add.toc());
+      // printff("add points time %f ms\n", t_add.toc());
 
       TicToc t_filter;
       for (int i = 0; i < laserCloudValidNum; i++) {
@@ -865,7 +865,7 @@ void process() {
         downSizeFilterSurf.filter(*tmpSurf);
         laserCloudSurfArray[ind] = tmpSurf;
       }
-      printf("filter time %f ms \n", t_filter.toc());
+      // printff("filter time %f ms \n", t_filter.toc());
 
       TicToc t_pub;
       // publish surround map for every 5 frame
@@ -912,9 +912,9 @@ void process() {
       laserCloudFullRes3.header.frame_id = "camera_init";
       pubLaserCloudFullRes.publish(laserCloudFullRes3);
 
-      printf("mapping pub time %f ms \n", t_pub.toc());
+      // printff("mapping pub time %f ms \n", t_pub.toc());
 
-      printf("whole mapping time %f ms +++++\n", t_whole.toc());
+      // printff("whole mapping time %f ms +++++\n", t_whole.toc());
 
       nav_msgs::Odometry odomAftMapped;
       odomAftMapped.header.frame_id = "camera_init";
@@ -965,7 +965,7 @@ int main(int argc, char **argv) {
   float planeRes = 0;
   nh.param<float>("mapping_line_resolution", lineRes, 0.4);
   nh.param<float>("mapping_plane_resolution", planeRes, 0.8);
-  printf("line resolution %f plane resolution %f \n", lineRes, planeRes);
+  // printff("line resolution %f plane resolution %f \n", lineRes, planeRes);
   downSizeFilterCorner.setLeafSize(lineRes, lineRes, lineRes);
   downSizeFilterSurf.setLeafSize(planeRes, planeRes, planeRes);
 

@@ -195,7 +195,7 @@ void VisualizeCurvature(float *v_curv, int *v_label,
         mk_i.color.g = 0;
         mk_i.color.b = 0;
         char cstr[10];
-        snprintf(cstr, 9, "%.2f", curv);
+        // snprintf(cstr, 9, "%.2f", curv);
         mk_i.text = std::string(cstr);
         /// debug
         if (dbg_show_id) {
@@ -219,7 +219,7 @@ void VisualizeCurvature(float *v_curv, int *v_label,
         mk_i.color.g = 0;
         mk_i.color.b = 0.8;
         char cstr[10];
-        snprintf(cstr, 9, "%.2f", curv);
+        // snprintf(cstr, 9, "%.2f", curv);
         mk_i.text = std::string(cstr);
         /// debug
         if (dbg_show_id) {
@@ -243,7 +243,7 @@ void VisualizeCurvature(float *v_curv, int *v_label,
         mk_i.color.g = 0.5;
         mk_i.color.b = 0.8;
         char cstr[10];
-        snprintf(cstr, 9, "%.2f", curv);
+        // snprintf(cstr, 9, "%.2f", curv);
         mk_i.text = std::string(cstr);
         /// debug
         if (dbg_show_id) {
@@ -267,7 +267,7 @@ void VisualizeCurvature(float *v_curv, int *v_label,
         mk_i.color.g = 1;
         mk_i.color.b = 0;
         char cstr[10];
-        snprintf(cstr, 9, "%.2f", curv);
+        // snprintf(cstr, 9, "%.2f", curv);
         mk_i.text = std::string(cstr);
         /// debug
         if (dbg_show_id) {
@@ -293,7 +293,7 @@ void VisualizeCurvature(float *v_curv, int *v_label,
         mk_i.color.g = 0;
         mk_i.color.b = 0;
         char cstr[10];
-        snprintf(cstr, 9, "%.2f", curv);
+        // snprintf(cstr, 9, "%.2f", curv);
         mk_i.text = std::string(cstr);
 
         nn++;
@@ -301,12 +301,12 @@ void VisualizeCurvature(float *v_curv, int *v_label,
       }
     }
   }
-  ROS_INFO("edge/edgeless/flatless/flat/nn num: [%d / %d / %d / %d / %d] - %lu",
-           edge_num, edgeless_num, flatless_num, flat_num, nn, pt_num);
+  // ROS_INFO("edge/edgeless/flatless/flat/nn num: [%d / %d / %d / %d / %d] - %lu",
+  //          edge_num, edgeless_num, flatless_num, flat_num, nn, pt_num);
 
   /// Delete old points
   if (pre_pt_num > pt_num) {
-    ROS_WARN("%lu > %lu", pre_pt_num, pt_num);
+    // ROS_WARN("%lu > %lu", pre_pt_num, pt_num);
     // curv_txt_msg.markers.resize(pre_pt_num);
     for (size_t i = pt_num; i < pre_pt_num; ++i) {
       auto &mk_i = curv_txt_msg.markers[i];
@@ -364,17 +364,17 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {
   }
 
   cloudSize = count;
-  printf("points size %d \n", cloudSize);
+  // printf("points size %d \n", cloudSize);
 
   pcl::PointCloud<PointType>::Ptr laserCloud(new pcl::PointCloud<PointType>());
   for (int i = 0; i < N_SCANS; i++) {
     scanStartInd[i] = laserCloud->size() + 5;  //
     *laserCloud += laserCloudScans[i];
     scanEndInd[i] = laserCloud->size() - 6; //
-    ROS_INFO("scan %d start-end [%d, %d]", i, scanStartInd[i], scanEndInd[i]);
+    // ROS_INFO("scan %d start-end [%d, %d]", i, scanStartInd[i], scanEndInd[i]);
   }
 
-  printf("prepare time %f \n", t_prepare.toc());
+  // printf("prepare time %f \n", t_prepare.toc());
 
   int kNumCurvSize = 5;
   constexpr int kNumRegion = 50;       // 6
@@ -647,8 +647,8 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {
       surfPointsLessFlat += *surfPointsLessFlatScan;
     }
   }
-  printf("sort q time %f \n", t_q_sort);
-  printf("seperate points time %f \n", t_pts.toc());
+  // printf("sort q time %f \n", t_q_sort);
+  // printf("seperate points time %f \n", t_pts.toc());
 
   if (false) {
     removeClosedPointCloud(*laserCloud, *laserCloud, MINIMUM_RANGE);
@@ -708,7 +708,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {
     }
   }
 
-  printf("scan registration time %f ms *************\n", t_whole.toc());
+  // printf("scan registration time %f ms *************\n", t_whole.toc());
   if (t_whole.toc() > 100) ROS_WARN("scan registration process over 100ms");
 }
 
@@ -720,10 +720,10 @@ int main(int argc, char **argv) {
   nh.param<double>("threshold_flat", THRESHOLD_FLAT, 0.01);
   nh.param<double>("threshold_sharp", THRESHOLD_SHARP, 0.01);
 
-  printf("scan line number %d \n", N_SCANS);
+  // printf("scan line number %d \n", N_SCANS);
 
   if (N_SCANS != 6) {
-    printf("only support livox horizon lidar!");
+    // printf("only support livox horizon lidar!");
     return 0;
   }
 

@@ -3,15 +3,15 @@
  *  It contains classes to store points, lines, world width and height, and obstacles.
  */
 
-#ifndef PUTN_CLASSES_H
-#define PUTN_CLASSES_H
+#ifndef OAC_CLASSES_H
+#define OAC_CLASSES_H
 
 #include <vector>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
-namespace PUTN
+namespace OAC
 {
 
 const float INF= std::numeric_limits<float>::max();

@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
 
   nh.param<int>("mapping_skip_frame", skipFrameNum, 2);
 
-  printf("Mapping %d Hz \n", 10 / skipFrameNum);
+  // printf("Mapping %d Hz \n", 10 / skipFrameNum);
 
   ros::Subscriber subCornerPointsSharp = nh.subscribe<sensor_msgs::PointCloud2>(
       "/laser_cloud_sharp", 100, laserCloudSharpHandler);
@@ -251,7 +251,7 @@ int main(int argc, char **argv) {
           timeCornerPointsLessSharp != timeLaserCloudFullRes ||
           timeSurfPointsFlat != timeLaserCloudFullRes ||
           timeSurfPointsLessFlat != timeLaserCloudFullRes) {
-        printf("unsync messeage!");
+        // printf("unsync messeage!");
         ROS_BREAK();
       }
 
@@ -435,12 +435,12 @@ int main(int argc, char **argv) {
           }
           // printf("coner_correspondance %d, plane_correspondence %d \n",
           // corner_correspondence, plane_correspondence);
-          printf("data association time %f ms \n", t_data.toc());
+          // printf("data association time %f ms \n", t_data.toc());
 
           if ((corner_correspondence + plane_correspondence) < 10) {
-            printf(
-                "less correspondence! "
-                "*************************************************\n");
+            // printf(
+            //     "less correspondence! "
+            //     "*************************************************\n");
           }
 
           TicToc t_solver;
@@ -450,9 +450,9 @@ int main(int argc, char **argv) {
           options.minimizer_progress_to_stdout = false;
           ceres::Solver::Summary summary;
           ceres::Solve(options, &problem, &summary);
-          printf("solver time %f ms \n", t_solver.toc());
+          // printf("solver time %f ms \n", t_solver.toc());
         }
-        printf("optimization twice time %f \n", t_opt.toc());
+        // printf("optimization twice time %f \n", t_opt.toc());
 
         t_w_curr = t_w_curr + q_w_curr * t_last_curr;
         q_w_curr = q_w_curr * q_last_curr;
@@ -545,8 +545,8 @@ int main(int argc, char **argv) {
         laserCloudFullRes3.header.frame_id = "aft_mapped";
         pubLaserCloudFullRes.publish(laserCloudFullRes3);
       }
-      printf("publication time %f ms \n", t_pub.toc());
-      printf("whole laserOdometry time %f ms \n \n", t_whole.toc());
+      // printf("publication time %f ms \n", t_pub.toc());
+      // printf("whole laserOdometry time %f ms \n \n", t_whole.toc());
       if (t_whole.toc() > 100) ROS_WARN("odometry process over 100ms");
 
       frameCount++;

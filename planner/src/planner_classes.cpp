@@ -1,8 +1,7 @@
 /**
  *  This file contains classes and methods to construct the world for the robot.
  *  It contains classes to store points, lines, world width and height, and obstacles.
- *  Author: jianzhuozhu
- *  Date: 2021-7-24
+ *  Date: 2023-6-24
  */
 
 #include "planner_classes.h"
@@ -10,7 +9,7 @@
 using namespace std;
 using namespace Eigen;
 
-namespace PUTN
+namespace OAC
 {
 
 Node::Node():cost_(0.0f){}
