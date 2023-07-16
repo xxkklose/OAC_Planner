@@ -165,6 +165,7 @@ class Local_Planner():
 
     def __curr_pose_cb(self, data):
         self.robot_state_set = True
+        print(data)
         self.curr_state[0] = data.data[0]
         self.curr_state[1] = data.data[1]
         self.curr_state[2] = data.data[3]

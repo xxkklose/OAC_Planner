@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
   roscpp
-  # rviz_visual_tools
+  rviz_visual_tools
   std_msgs
   tf
 )
@@ -141,7 +141,9 @@ add_executable(global_planning_node
     src/global_planning_node.cpp
     src/planner.cpp
     src/planner_classes.cpp
-    src/planner_vis.cpp)
+    src/planner_vis.cpp
+    # src/minimum_jerk.cpp
+    )
 
 target_link_libraries(global_planning_node 
     ${catkin_LIBRARIES}

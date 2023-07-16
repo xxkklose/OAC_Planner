@@ -1,5 +1,7 @@
 #include "backward.hpp"
 #include "planner.h"
+#include "minimum_jerk.h"
+#include "minimum_jerk.cpp"
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Path.h>
@@ -48,6 +50,7 @@ double neighbor_radius;
 Vector3d start_pt;
 Vector3d target_pt;
 World* world = NULL;
+Minimum_jerk mj;
 PFRRTStar* pf_rrt_star = NULL;
 
 // function declaration
@@ -130,6 +133,7 @@ void findSolution()
   Path solution = Path();
 
   pf_rrt_star->initWithGoal(start_pt, target_pt);
+  // pf_rrt_star->initWithGoal(target_pt, start_pt);
 
   // Case1: The PF-RRT* can't work at when the origin can't be project to surface
   if (pf_rrt_star->state() == Invalid)
@@ -164,6 +168,12 @@ void findSolution()
     double max_time = 100.0;
 
     solution = pf_rrt_star->planner(max_iter, max_time);
+    std::vector<Eigen::Vector3d> trac_points;
+    for(const auto &node : solution.nodes_){
+      trac_points.push_back(node->position_);
+    }
+
+    mj.solve_minimum_jerk(trac_points);
 
     if (!solution.nodes_.empty())
       ROS_INFO("Get a sub path!");
@@ -250,7 +260,7 @@ int main(int argc, char** argv)
   path_interpolation_pub = nh.advertise<std_msgs::Float32MultiArray>("global_path", 1000);
   pose_pub_to_control = nh.advertise<geometry_msgs::PoseStamped>("robot_pose", 40);
 
-  nh.param("map/resolution", resolution, 0.1);
+  nh.param("map/resolution", resolution, 1.0);
 
   nh.param("planning/goal_thre", goal_thre, 1.0);
   nh.param("planning/step_size", step_size, 0.2);
@@ -270,7 +280,7 @@ int main(int argc, char** argv)
   nh.param("planning/max_initial_time", max_initial_time, 1000.0);
 
   // // Initialization
-  world = new World(resolution);
+  world = new World(0.1);
   pf_rrt_star = new PFRRTStar(h_surf_car, world);
 
   // Set argument of PF-RRT*
@@ -320,13 +330,13 @@ int main(int argc, char** argv)
     pose_msg.pose.orientation.y = transform.getRotation().getY();
     pose_msg.pose.orientation.z = transform.getRotation().getZ();
 
-    outputFile.open("/home/parallels/1.txt", std::ios::app);
-    if(outputFile.is_open()){
-      // outputFile << "start_pt： x " << start_pt.x << " | y " << start_pt.y << " | z " << start_pt.z << std::endl;
-      outputFile << "start_pt：  " << start_pt << std::endl;
-      outputFile << "pose_msg.pose.position.x " << pose_msg.pose.position.x<< " | y " << pose_msg.pose.position.y << " | z " << pose_msg.pose.position.z << std::endl;
-    }
-    outputFile.close();
+    // outputFile.open("/home/parallels/1.txt", std::ios::app);
+    // if(outputFile.is_open()){
+    //   // outputFile << "start_pt： x " << start_pt.x << " | y " << start_pt.y << " | z " << start_pt.z << std::endl;
+    //   outputFile << "start_pt：  " << start_pt << std::endl;
+    //   outputFile << "pose_msg.pose.position.x " << pose_msg.pose.position.x<< " | y " << pose_msg.pose.position.y << " | z " << pose_msg.pose.position.z << std::endl;
+    // }
+    // outputFile.close();
 
     pose_pub_to_control.publish(pose_msg);
 

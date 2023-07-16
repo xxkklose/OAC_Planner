@@ -160,17 +160,17 @@ void visPath(const vector<Node*>& solution, Publisher* path_vis_pub, const Eigen
       pts.push_back(node->position_);
       pts_tra.push_back(node->plane_->traversability);
     }
-    pts.push_back(start_pt);
-    std::reverse(pts.begin(), pts.end());
+    // pts.push_back(start_pt);
+    // std::reverse(pts.begin(), pts.end());
 
-    for (size_t i = 0; i < pts.size(); i++)
-    {
-      if(output.is_open()){
-        output << "第"<<i + 1<<"个点： " << pts[i] <<std::endl;
-      }
-    }
+    // for (size_t i = 0; i < pts.size(); i++)
+    // {
+    //   if(output.is_open()){
+    //     output << "第"<<i + 1<<"个点： " << pts[i] <<std::endl;
+    //   }
+    // }
     
-    output.close();
+    // output.close();
 
     geometry_msgs::Point pt;
     for (const auto& coord : pts)
@@ -198,9 +198,9 @@ void visPath(const vector<Node*>& solution, Publisher* path_vis_pub, const Eigen
       Quaterniond quaternion(R);
       orientations.push_back(quaternion);
     }
-    Quaterniond q_start(0,0,0,1);
-    orientations.push_back(q_start);
-    std::reverse(orientations.begin(), orientations.end());
+    // Quaterniond q_start(0,0,0,1);
+    // orientations.push_back(q_start);
+    // std::reverse(orientations.begin(), orientations.end());
 
     // make frame
     vector<Vector4d> frame_list = generateFrame(pts, pts_tra, orientations);
