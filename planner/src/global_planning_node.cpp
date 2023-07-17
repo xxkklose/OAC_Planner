@@ -308,7 +308,7 @@ int main(int argc, char** argv)
     {
       try
       {
-        listener.lookupTransform("camera_init", "aft_mapped", ros::Time(0), transform);  //查询变换
+        listener.lookupTransform("camera_init", "body", ros::Time(0), transform);  //查询变换
         break;
       }
       catch (tf::TransformException& ex)
