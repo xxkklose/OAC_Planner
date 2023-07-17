@@ -103,13 +103,13 @@ protected:
     //To accelerate the speed of generating the initial solution,the tree will grow toward the target with it,a centain probability 
     double goal_biased_=0.15;
 
-    double goal_threshold_=1.0;
-    double sub_goal_threshold_=1.0;
+    double goal_threshold_=0.5;
+    double sub_goal_threshold_=0.5;
 
     double inherit_threshold_=1.25;
 
     //step size used when generating new nodes
-    double step_size_=0.2;
+    double step_size_=1.0;
 
     //parameters related to function fitPlane
     float h_surf_;
@@ -199,6 +199,22 @@ protected:
 
     void pubTraversabilityOfTree(ros::Publisher* tree_tra_pub);
 };
+
+
+class Minimum_jerk
+{
+private:
+    // std::vector<Eigen::Vector3d> points;
+
+public:
+    Minimum_jerk(/* args */);
+    ~Minimum_jerk();
+
+    void solve_minimum_jerk(std::vector<Eigen::Vector3d> points);
+
+    double cost_func = 0.0;
+};
+
 }
 }
 

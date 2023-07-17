@@ -1,7 +1,5 @@
 #include "backward.hpp"
 #include "planner.h"
-#include "minimum_jerk.h"
-#include "minimum_jerk.cpp"
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Path.h>
@@ -50,7 +48,7 @@ double neighbor_radius;
 Vector3d start_pt;
 Vector3d target_pt;
 World* world = NULL;
-Minimum_jerk mj;
+Minimum_jerk mj = Minimum_jerk();
 PFRRTStar* pf_rrt_star = NULL;
 
 // function declaration
@@ -153,6 +151,12 @@ void findSolution()
       solution = pf_rrt_star->planner(max_iter, max_time);
       max_time += 100.0;
     }
+    std::vector<Eigen::Vector3d> trac_points;
+    for(const auto &node : solution.nodes_){
+      trac_points.push_back(node->position_);
+    }
+    trac_points.push_back(start_pt);
+    mj.solve_minimum_jerk(trac_points);
 
     if (!solution.nodes_.empty())
       ROS_INFO("Get a global path!");
@@ -173,6 +177,7 @@ void findSolution()
       trac_points.push_back(node->position_);
     }
 
+    trac_points.push_back(start_pt);
     mj.solve_minimum_jerk(trac_points);
 
     if (!solution.nodes_.empty())
@@ -208,7 +213,6 @@ void findSolution()
 void callPlanner()
 {
   static double init_time_cost = 0.0;
-  std::cout << world->has_map_ << std::endl;
   if (!world->has_map_)
     return;
 
@@ -330,13 +334,13 @@ int main(int argc, char** argv)
     pose_msg.pose.orientation.y = transform.getRotation().getY();
     pose_msg.pose.orientation.z = transform.getRotation().getZ();
 
-    // outputFile.open("/home/parallels/1.txt", std::ios::app);
-    // if(outputFile.is_open()){
-    //   // outputFile << "start_pt： x " << start_pt.x << " | y " << start_pt.y << " | z " << start_pt.z << std::endl;
-    //   outputFile << "start_pt：  " << start_pt << std::endl;
-    //   outputFile << "pose_msg.pose.position.x " << pose_msg.pose.position.x<< " | y " << pose_msg.pose.position.y << " | z " << pose_msg.pose.position.z << std::endl;
-    // }
-    // outputFile.close();
+    outputFile.open("/home/parallels/1.txt", std::ios::app);
+    if(outputFile.is_open()){
+      // outputFile << "start_pt： x " << start_pt.x << " | y " << start_pt.y << " | z " << start_pt.z << std::endl;
+      outputFile << "start_pt：  " << start_pt << std::endl;
+      outputFile << "pose_msg.pose.position.x " << pose_msg.pose.position.x<< " | y " << pose_msg.pose.position.y << " | z " << pose_msg.pose.position.z << std::endl;
+    }
+    outputFile.close();
 
     pose_pub_to_control.publish(pose_msg);
 

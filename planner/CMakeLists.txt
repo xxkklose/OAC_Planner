@@ -142,7 +142,6 @@ add_executable(global_planning_node
     src/planner.cpp
     src/planner_classes.cpp
     src/planner_vis.cpp
-    # src/minimum_jerk.cpp
     )
 
 target_link_libraries(global_planning_node 

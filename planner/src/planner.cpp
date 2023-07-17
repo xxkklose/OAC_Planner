@@ -368,8 +368,9 @@ Vector2d PFRRTStar::sample()
     {
         case Global:
         {
-            if(!path_.nodes_.empty()) point_sample=project2plane(sampleInEllipsoid());
-            else
+            // 减少从起始点开始采样距离较小的问题
+            // if(!path_.nodes_.empty()) point_sample=project2plane(sampleInEllipsoid());
+            // else
                 point_sample=(getRandomNum() < goal_biased_ )?project2plane(node_target_->position_):getRandom2DPoint();
         }
         break;
@@ -708,3 +709,15 @@ void PFRRTStar::pubTraversabilityOfTree(Publisher* tree_tra_pub)
     }
     tree_tra_pub->publish(msg);
 }
+
+Minimum_jerk::Minimum_jerk(){}
+Minimum_jerk::~Minimum_jerk(){}
+
+void Minimum_jerk::solve_minimum_jerk(std::vector<Eigen::Vector3d> points){
+
+    int n = points.size() - 1; //pieceNum
+    Eigen::Vector3d start_pt;
+    start_pt = points[0];
+
+}
+
