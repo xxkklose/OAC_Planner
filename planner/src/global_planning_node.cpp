@@ -151,14 +151,17 @@ void findSolution()
       solution = pf_rrt_star->planner(max_iter, max_time);
       max_time += 100.0;
     }
-    std::vector<Eigen::Vector3d> trac_points;
+    mj.waypoints.clear();
     for(const auto &node : solution.nodes_){
-      trac_points.push_back(node->position_);
+      mj.waypoints.push_back(node->position_);
     }
-    trac_points.push_back(start_pt);
+
+    mj.waypoints.push_back(start_pt);
     Eigen::Vector3d start_vel = {};
     Eigen::Vector3d start_acc = {};
-    mj.solve_minimum_jerk(trac_points,start_vel,start_acc);
+    Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
+    mj.getTimeVector(mj.waypoints,0.4,0.2); //TODO:max_vel, max_acc
+    mj.solve_minimum_jerk(mj.waypoints, start_vel, start_acc, coefficientMatrix);
 
     if (!solution.nodes_.empty())
       ROS_INFO("Get a global path!");
@@ -174,15 +177,17 @@ void findSolution()
     double max_time = 100.0;
 
     solution = pf_rrt_star->planner(max_iter, max_time);
-    std::vector<Eigen::Vector3d> trac_points;
+    mj.waypoints.clear();
     for(const auto &node : solution.nodes_){
-      trac_points.push_back(node->position_);
+      mj.waypoints.push_back(node->position_);
     }
 
-    trac_points.push_back(start_pt);
+    mj.waypoints.push_back(start_pt);
     Eigen::Vector3d start_vel = {};
     Eigen::Vector3d start_acc = {};
-    mj.solve_minimum_jerk(trac_points, start_vel, start_acc);
+    Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
+    mj.getTimeVector(mj.waypoints,0.4,0.2); //TODO:max_vel, max_acc
+    mj.solve_minimum_jerk(mj.waypoints, start_vel, start_acc, coefficientMatrix);
 
     if (!solution.nodes_.empty())
       ROS_INFO("Get a sub path!");

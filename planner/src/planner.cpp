@@ -713,23 +713,38 @@ void PFRRTStar::pubTraversabilityOfTree(Publisher* tree_tra_pub)
 Minimum_jerk::Minimum_jerk(){}
 Minimum_jerk::~Minimum_jerk(){}
 
+
+void Minimum_jerk::getTimeVector(std::vector<Eigen::Vector3d> points, double max_vel, double max_acc){
+    timeVector.clear();
+    for (int i = 0; i < points.size() - 1; i++)
+    {
+        double dist = (points[i+1] - points[i]).norm();
+        // std::cout << "dist " << i << " : " << dist <<std::endl;
+        double t = timeTrapzVel(dist, max_vel, max_acc);
+        std::cout << "t " << i << " : " << dist <<std::endl;
+        timeVector.push_back(t);
+    }  
+}
+
 void Minimum_jerk::solve_minimum_jerk(
-    std::vector<Eigen::Vector3d> points,
-    Eigen::Vector3d start_vel,
-    Eigen::Vector3d start_acc
+    const std::vector<Eigen::Vector3d> &points,
+    const Eigen::Vector3d &start_vel,
+    const Eigen::Vector3d &start_acc,
+    Eigen::MatrixX3d &coefficientMatrix
     ){
 
     int n = points.size() - 1; //pieceNum
+    this->waypoints = points;
     Eigen::Vector3d start_pt,end_pt;
     start_pt = points[0];
     end_pt = points[n];
 
-    Eigen::MatrixXf B = Eigen::MatrixXf::Zero(6*n, 3);
-	Eigen::MatrixXf M = Eigen::MatrixXf::Zero(6*n, 6*n);
+    Eigen::MatrixXd B = Eigen::MatrixXd::Zero(6*n, 3);
+	Eigen::MatrixXd M = Eigen::MatrixXd::Zero(6*n, 6*n);
 
     //初始点配置
-    Eigen::MatrixXf F0 = Eigen::MatrixXf::Zero(3, 6);
-    Eigen::MatrixXf D0 = Eigen::MatrixXf::Zero(3, 3);
+    Eigen::MatrixXd F0 = Eigen::MatrixXd::Zero(3, 6);
+    Eigen::MatrixXd D0 = Eigen::MatrixXd::Zero(3, 3);
     F0 << 1, 0, 0, 0, 0, 0,
           0, 1, 0, 0, 0, 0,
           0, 0, 2, 0, 0, 0;
@@ -741,11 +756,12 @@ void Minimum_jerk::solve_minimum_jerk(
     B.block(0,0,3,3) = D0;
     M.block(0,0,3,6) = F0;
 
-    for (int i = 1; i < n - 1; i++)
+    for (int i = 1; i < n; i++)
     {
-        Eigen::MatrixXf Ei = Eigen::MatrixXf::Zero(6, 6);
-        Eigen::MatrixXf Fi = Eigen::MatrixXf::Zero(6, 6);
-        Eigen::MatrixXf Di = Eigen::MatrixXf::Zero(1, 3);
+        Eigen::MatrixXd Ei = Eigen::MatrixXd::Zero(6, 6);
+        Eigen::MatrixXd Fi = Eigen::MatrixXd::Zero(6, 6);
+        Eigen::MatrixXd Di = Eigen::MatrixXd::Zero(1, 3);
+        double t = timeVector[i - 1];
 
         Fi << 0, 0, 0, 0, 0, 0,
             -1, 0, 0, 0, 0, 0,
@@ -754,21 +770,41 @@ void Minimum_jerk::solve_minimum_jerk(
             0, 0, 0, -6, 0, 0,
             0, 0, 0, 0, -24, 0;
 
-        // Ei << 1, t, pow(t, 2), pow(t, 3), pow(t, 4), pow(t, 5),
-        //     1, t, pow(t, 2), pow(t, 3), pow(t, 4), pow(t, 5),
-        //     0, 1, 2 * t, 3 * pow(t, 2), 4 * pow(t, 3), 5 * pow(t, 4),
-        //     0, 0, 2, 6 * t, 12 * pow(t, 2), 20 * pow(t, 3),
-        //     0, 0, 0, 6, 24 * t, 60 * pow(t, 2),
-        //     0, 0, 0, 0, 24, 120 * t;
+        Ei << 1, t, pow(t, 2), pow(t, 3), pow(t, 4), pow(t, 5),
+            1, t, pow(t, 2), pow(t, 3), pow(t, 4), pow(t, 5),
+            0, 1, 2 * t, 3 * pow(t, 2), 4 * pow(t, 3), 5 * pow(t, 4),
+            0, 0, 2, 6 * t, 12 * pow(t, 2), 20 * pow(t, 3),
+            0, 0, 0, 6, 24 * t, 60 * pow(t, 2),
+            0, 0, 0, 0, 24, 120 * t;
 
-        // Di << 
+        Di << waypoints[i](0), waypoints[i](1), waypoints[i](2);
+
+        M.block(3+6*(i-1), 6*(i-1), 6, 6) = Ei;
+        M.block(3+6*(i-1), 6*i, 6, 6) = Fi;
+        B.block(3+6*(i-1), 0, 1, 3) = Di;
     }
     
+    //目标点配置
+    Eigen::MatrixXd EM = Eigen::MatrixXd::Zero(3, 6);
+    Eigen::MatrixXd DM = Eigen::MatrixXd::Zero(3, 3);
+    double t = timeVector[n];
 
+    DM << end_pt(0), end_pt(1), end_pt(2),
+          0, 0, 0,
+          0, 0, 0;
+
+    EM << 1, t, pow(t, 2), pow(t, 3), pow(t, 4), pow(t, 5),
+           0, 1, 2 * t, 3 * pow(t, 2), 4 * pow(t, 3), 5 * pow(t, 4),
+           0, 0, 2, 6 * t, 12 * pow(t, 2), 20 * pow(t, 3);
+
+    B.block(6*(n-1)+3,0,3,3) = DM;
+    M.block(6*(n-1)+3,6*(n-1),3,6) = EM;
     
-      
+    for (int i = 0; i < 3; i++)
+    {
+        coefficientMatrix.col(i) = M.colPivHouseholderQr().solve(B.col(i));
+    }  
     
-
-
+    std::cout << "coefficientMatrix: " << coefficientMatrix << std::endl;
 }
 
