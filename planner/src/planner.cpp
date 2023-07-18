@@ -368,8 +368,9 @@ Vector2d PFRRTStar::sample()
     {
         case Global:
         {
-            if(!path_.nodes_.empty()) point_sample=project2plane(sampleInEllipsoid());
-            else
+            // 减少从起始点开始采样距离较小的问题
+            // if(!path_.nodes_.empty()) point_sample=project2plane(sampleInEllipsoid());
+            // else
                 point_sample=(getRandomNum() < goal_biased_ )?project2plane(node_target_->position_):getRandom2DPoint();
         }
         break;
@@ -708,3 +709,66 @@ void PFRRTStar::pubTraversabilityOfTree(Publisher* tree_tra_pub)
     }
     tree_tra_pub->publish(msg);
 }
+
+Minimum_jerk::Minimum_jerk(){}
+Minimum_jerk::~Minimum_jerk(){}
+
+void Minimum_jerk::solve_minimum_jerk(
+    std::vector<Eigen::Vector3d> points,
+    Eigen::Vector3d start_vel,
+    Eigen::Vector3d start_acc
+    ){
+
+    int n = points.size() - 1; //pieceNum
+    Eigen::Vector3d start_pt,end_pt;
+    start_pt = points[0];
+    end_pt = points[n];
+
+    Eigen::MatrixXf B = Eigen::MatrixXf::Zero(6*n, 3);
+	Eigen::MatrixXf M = Eigen::MatrixXf::Zero(6*n, 6*n);
+
+    //初始点配置
+    Eigen::MatrixXf F0 = Eigen::MatrixXf::Zero(3, 6);
+    Eigen::MatrixXf D0 = Eigen::MatrixXf::Zero(3, 3);
+    F0 << 1, 0, 0, 0, 0, 0,
+          0, 1, 0, 0, 0, 0,
+          0, 0, 2, 0, 0, 0;
+
+    D0 << start_pt(0), start_pt(1), start_pt(2),
+          start_vel(0), start_vel(1), start_vel(2),
+          start_acc(0), start_acc(1), start_acc(2);
+
+    B.block(0,0,3,3) = D0;
+    M.block(0,0,3,6) = F0;
+
+    for (int i = 1; i < n - 1; i++)
+    {
+        Eigen::MatrixXf Ei = Eigen::MatrixXf::Zero(6, 6);
+        Eigen::MatrixXf Fi = Eigen::MatrixXf::Zero(6, 6);
+        Eigen::MatrixXf Di = Eigen::MatrixXf::Zero(1, 3);
+
+        Fi << 0, 0, 0, 0, 0, 0,
+            -1, 0, 0, 0, 0, 0,
+            0, -1, 0, 0, 0, 0,
+            0, 0, -2, 0, 0, 0,
+            0, 0, 0, -6, 0, 0,
+            0, 0, 0, 0, -24, 0;
+
+        Ei << 1, t, pow(t, 2), pow(t, 3), pow(t, 4), pow(t, 5),
+            1, t, pow(t, 2), pow(t, 3), pow(t, 4), pow(t, 5),
+            0, 1, 2 * t, 3 * pow(t, 2), 4 * pow(t, 3), 5 * pow(t, 4),
+            0, 0, 2, 6 * t, 12 * pow(t, 2), 20 * pow(t, 3),
+            0, 0, 0, 6, 24 * t, 60 * pow(t, 2),
+            0, 0, 0, 0, 24, 120 * t;
+
+        Di << points[i].trans
+    }
+    
+
+    
+      
+    
+
+
+}
+
