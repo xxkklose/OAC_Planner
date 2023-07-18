@@ -210,7 +210,7 @@ public:
     Minimum_jerk(/* args */);
     ~Minimum_jerk();
 
-    void solve_minimum_jerk(std::vector<Eigen::Vector3d> points);
+    void solve_minimum_jerk(std::vector<Eigen::Vector3d> points,Eigen::Vector3d start_vel,Eigen::Vector3d start_acc);
 
     double cost_func = 0.0;
 };

@@ -156,7 +156,9 @@ void findSolution()
       trac_points.push_back(node->position_);
     }
     trac_points.push_back(start_pt);
-    mj.solve_minimum_jerk(trac_points);
+    Eigen::Vector3d start_vel = {};
+    Eigen::Vector3d start_acc = {};
+    mj.solve_minimum_jerk(trac_points,start_vel,start_acc);
 
     if (!solution.nodes_.empty())
       ROS_INFO("Get a global path!");
@@ -178,7 +180,9 @@ void findSolution()
     }
 
     trac_points.push_back(start_pt);
-    mj.solve_minimum_jerk(trac_points);
+    Eigen::Vector3d start_vel = {};
+    Eigen::Vector3d start_acc = {};
+    mj.solve_minimum_jerk(trac_points, start_vel, start_acc);
 
     if (!solution.nodes_.empty())
       ROS_INFO("Get a sub path!");
