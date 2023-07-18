@@ -754,14 +754,14 @@ void Minimum_jerk::solve_minimum_jerk(
             0, 0, 0, -6, 0, 0,
             0, 0, 0, 0, -24, 0;
 
-        Ei << 1, t, pow(t, 2), pow(t, 3), pow(t, 4), pow(t, 5),
-            1, t, pow(t, 2), pow(t, 3), pow(t, 4), pow(t, 5),
-            0, 1, 2 * t, 3 * pow(t, 2), 4 * pow(t, 3), 5 * pow(t, 4),
-            0, 0, 2, 6 * t, 12 * pow(t, 2), 20 * pow(t, 3),
-            0, 0, 0, 6, 24 * t, 60 * pow(t, 2),
-            0, 0, 0, 0, 24, 120 * t;
+        // Ei << 1, t, pow(t, 2), pow(t, 3), pow(t, 4), pow(t, 5),
+        //     1, t, pow(t, 2), pow(t, 3), pow(t, 4), pow(t, 5),
+        //     0, 1, 2 * t, 3 * pow(t, 2), 4 * pow(t, 3), 5 * pow(t, 4),
+        //     0, 0, 2, 6 * t, 12 * pow(t, 2), 20 * pow(t, 3),
+        //     0, 0, 0, 6, 24 * t, 60 * pow(t, 2),
+        //     0, 0, 0, 0, 24, 120 * t;
 
-        Di << 
+        // Di << 
     }
     
 
