@@ -30,6 +30,7 @@ ros::Publisher tree_vis_pub;
 ros::Publisher path_interpolation_pub;
 ros::Publisher tree_tra_pub;
 ros::Publisher pose_pub_to_control;
+ros::Publisher traj_jerk_vis_pub;
 
 // indicate whether the robot has a moving goal
 bool has_goal = false;
@@ -155,13 +156,15 @@ void findSolution()
     for(const auto &node : solution.nodes_){
       mj.waypoints.push_back(node->position_);
     }
-
+    ROS_WARN("1");
     mj.waypoints.push_back(start_pt);
-    Eigen::Vector3d start_vel = {};
-    Eigen::Vector3d start_acc = {};
     Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
     mj.getTimeVector(mj.waypoints,0.4,0.2); //TODO:max_vel, max_acc
-    mj.solve_minimum_jerk(mj.waypoints, start_vel, start_acc, coefficientMatrix);
+    // mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
+    mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix); //暂时先用零向量代替
+
+
+    visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
     if (!solution.nodes_.empty())
       ROS_INFO("Get a global path!");
@@ -183,11 +186,12 @@ void findSolution()
     }
 
     mj.waypoints.push_back(start_pt);
-    Eigen::Vector3d start_vel = {};
-    Eigen::Vector3d start_acc = {};
     Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
     mj.getTimeVector(mj.waypoints,0.4,0.2); //TODO:max_vel, max_acc
-    mj.solve_minimum_jerk(mj.waypoints, start_vel, start_acc, coefficientMatrix);
+    // mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
+    mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix);
+
+    visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
     if (!solution.nodes_.empty())
       ROS_INFO("Get a sub path!");
@@ -221,6 +225,7 @@ void findSolution()
  */
 void callPlanner()
 {
+  ROS_WARN("access callPlanner");
   static double init_time_cost = 0.0;
   if (!world->has_map_)
     return;
@@ -261,7 +266,6 @@ int main(int argc, char** argv)
   ros::NodeHandle nh("~");
 
   map_sub = nh.subscribe("map", 1, rcvPointCloudCallBack);
-  // map_sub = nh.subscribe("/livox_total_point", 1, rcvPointCloudCallBack);
   wp_sub = nh.subscribe("waypoints", 1, rcvWaypointsCallback);
 
   grid_map_vis_pub = nh.advertise<sensor_msgs::PointCloud2>("grid_map_vis", 1);
@@ -272,8 +276,9 @@ int main(int argc, char** argv)
   tree_tra_pub = nh.advertise<std_msgs::Float32MultiArray>("tree_tra", 40);
   path_interpolation_pub = nh.advertise<std_msgs::Float32MultiArray>("global_path", 1000);
   pose_pub_to_control = nh.advertise<geometry_msgs::PoseStamped>("robot_pose", 40);
+  traj_jerk_vis_pub = nh.advertise<nav_msgs::Path>("trajectory_path", 40);
 
-  nh.param("map/resolution", resolution, 1.0);
+  nh.param("map/resolution", resolution, 0.1);
 
   nh.param("planning/goal_thre", goal_thre, 1.0);
   nh.param("planning/step_size", step_size, 0.2);
@@ -293,7 +298,7 @@ int main(int argc, char** argv)
   nh.param("planning/max_initial_time", max_initial_time, 1000.0);
 
   // // Initialization
-  world = new World(0.1);
+  world = new World(resolution);
   pf_rrt_star = new PFRRTStar(h_surf_car, world);
 
   // Set argument of PF-RRT*
@@ -307,6 +312,8 @@ int main(int argc, char** argv)
   pf_rrt_star->tree_vis_pub_ = &tree_vis_pub;
   pf_rrt_star->tree_tra_pub_ = &tree_tra_pub;
 
+  mj.traj_jerk_vis_pub_ = &traj_jerk_vis_pub;
+  
   tf::TransformListener listener;
 
   while (ros::ok())
@@ -330,6 +337,8 @@ int main(int argc, char** argv)
       }
     }
     start_pt << transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z();
+   
+    //set message robot_pose 
     geometry_msgs::PoseStamped pose_msg;
     pose_msg.header.stamp = ros::Time::now();
     pose_msg.header.frame_id = "camera_init";
@@ -342,7 +351,20 @@ int main(int argc, char** argv)
     pose_msg.pose.orientation.x = transform.getRotation().getX();
     pose_msg.pose.orientation.y = transform.getRotation().getY();
     pose_msg.pose.orientation.z = transform.getRotation().getZ();
-
+    //save vel_direction to minimum_jerk
+    Eigen::Vector3d unit_vector = {1.0, 0.0, 0.0};
+    Eigen::Quaterniond tmp_quaternion(transform.getRotation().getW(),
+                                      transform.getRotation().getX(),
+                                      transform.getRotation().getY(),
+                                      transform.getRotation().getZ());
+    
+    // 将四元数转换为旋转矩阵
+    Eigen::Matrix3d rotationMatrix = tmp_quaternion.toRotationMatrix();
+    // 转换到camera_init坐标系下
+    mj.start_vel = rotationMatrix * (0.01*unit_vector);
+    mj.start_acc = rotationMatrix * (0.01*unit_vector);
+    // mj.start_vel = rotationMatrix * unit_vector;
+    // mj.start_acc = rotationMatrix * unit_vector;
     outputFile.open("/home/parallels/1.txt", std::ios::app);
     if(outputFile.is_open()){
       // outputFile << "start_pt： x " << start_pt.x << " | y " << start_pt.y << " | z " << start_pt.z << std::endl;

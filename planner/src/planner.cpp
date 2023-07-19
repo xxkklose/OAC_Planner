@@ -719,9 +719,7 @@ void Minimum_jerk::getTimeVector(std::vector<Eigen::Vector3d> points, double max
     for (int i = 0; i < points.size() - 1; i++)
     {
         double dist = (points[i+1] - points[i]).norm();
-        // std::cout << "dist " << i << " : " << dist <<std::endl;
         double t = timeTrapzVel(dist, max_vel, max_acc);
-        std::cout << "t " << i << " : " << dist <<std::endl;
         timeVector.push_back(t);
     }  
 }
@@ -804,7 +802,5 @@ void Minimum_jerk::solve_minimum_jerk(
     {
         coefficientMatrix.col(i) = M.colPivHouseholderQr().solve(B.col(i));
     }  
-    
-    std::cout << "coefficientMatrix: " << coefficientMatrix << std::endl;
 }
 

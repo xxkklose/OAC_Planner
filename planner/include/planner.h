@@ -203,9 +203,6 @@ protected:
 
 class Minimum_jerk
 {
-private:
-    // std::vector<Eigen::Vector3d> points;
-
 public:
     Minimum_jerk(/* args */);
     ~Minimum_jerk();
@@ -225,17 +222,21 @@ public:
 
         if (dist < d + d)
         {
-            return 2.0 * sqrt(dist / acc);
+            return 4.0 * sqrt(dist / acc);
         }
         else
         {
-            return 2.0 * t + (dist - 2.0 * d) / vel;
+            return 4.0 * t + (dist - 2.0 * d) / vel;
         }
     };
 
 
     std::vector<Eigen::Vector3d> waypoints;
     std::vector<double> timeVector;
+    Eigen::Vector3d start_vel;
+    Eigen::Vector3d start_acc;
+    ros::Publisher* traj_jerk_vis_pub_=NULL;
+    ros::Publisher* waypoints_jerk_vis_pub=NULL;
 
 };
 
