@@ -1,5 +1,5 @@
 <launch>
-  <include file="$(find loam_horizon)/launch/loam_livox_horizon_imu.launch">
+  <include file="$(find fast_lio_sam)/launch/mapping_horizon_indoor.launch">
 	  <!-- <arg name="rviz" value="false"/> -->
   </include>
 
@@ -13,15 +13,15 @@
 
   <node pkg="planner" type="global_planning_node" name="global_planning_node" output="screen" required = "true">
       <remap from="~waypoints"       to="/waypoint_generator/waypoints"/>
-      <remap from="~map"             to="/livox_total_point"/> 
+      <remap from="~map"             to="/Laser_map"/> 
 
-      <!-- <rosparam command="load" file="$(find putn)/config/for_simulation/$(arg scene).yaml"/> -->
       <rosparam command="load" file="$(find planner)/config/for_simulation/map1.yaml"/>
   </node>
 
   <node pkg="planner" type="local_obs_node" name="local_obs_node" output="screen" required = "true">
-      <remap from="~map"             to="/velodyne_cloud_registered"/> 
+      <remap from="~map"             to="/cloud_registered"/> 
 
+      <!-- <param name="map/resolution"      value="0.05" /> -->
       <param name="map/resolution"      value="0.1" />
       <param name="map/local_x_l"       value="-1.8"/>
       <param name="map/local_x_u"       value="1.8"/>
@@ -33,8 +33,8 @@
 
   <!-- <node pkg="gpr" type="gpr_path" name="gpr_path" output="screen" required="true">
       <param name="file/cfg_path" type="string" value="$(find gpr)/config/hyperparam.txt"/>
-  </node> -->
-  <!-- <node name="local_planner" pkg="local_planner" type="local_planner.py" launch-prefix="gnome-terminal -x">
+  </node>
+    <node name="local_planner" pkg="local_planner" type="local_planner.py" launch-prefix="gnome-terminal -x">
   </node> -->
 
   <include file="$(find livox_ros_driver)/launch/livox_lidar_msg.launch"/>

@@ -14,8 +14,9 @@
 	<param name="runtime_pos_log_enable" type="bool" value="0" />
     <node pkg="fast_lio_sam" type="fastlio_sam_mapping" name="laserMapping" output="screen" /> 
 
+	<node pkg="fast_lio_sam" type="savePointCloud" name="savePointCloud" output="screen" />
 	<!-- <group if="$(arg rviz)">
 	<node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find fast_lio_sam)/rviz_cfg/loam_livox.rviz" />
-	</group> -->
-
+	</group> 
+ -->
 </launch>
