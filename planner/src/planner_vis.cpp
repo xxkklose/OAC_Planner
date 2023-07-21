@@ -1,8 +1,14 @@
 #include "planner_vis.h"
 #include <visualization_msgs/Marker.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <nav_msgs/Path.h>
 #include <fstream>
 #include <algorithm>
+
+// #include <ros/ros.h>
+// #include <visualization_msgs/Marker.h>
+// #include <Eigen/Dense>
+// #include <vector>
 
 using namespace OAC;
 using namespace Eigen;
@@ -334,5 +340,80 @@ vector<Vector4d> generateFrame(const vector<Vector3d>& pts, const vector<float>&
   }
   return Frame_list;
 }
+
+void visTrajectory(const std::vector<Eigen::Vector3d> &waypoints, 
+                   const Eigen::MatrixX3d &coefficientMatrix,
+                   const std::vector<double> &timeVector,
+                   ros::Publisher* traj_vis_pub){
+
+    // // 构造Marker消息
+    // visualization_msgs::Marker marker;
+    // marker.header.frame_id = "camera_init";
+    // marker.header.stamp = ros::Time::now();
+    // marker.ns = "trajectory";
+    // marker.id = 0;
+    // marker.type = visualization_msgs::Marker::LINE_STRIP;
+    // marker.action = visualization_msgs::Marker::ADD;
+    // marker.scale.x = 0.1;  // 线宽
+    // marker.color.r = 1.0;
+    // marker.color.g = 0.0;
+    // marker.color.b = 0.0;
+    // marker.color.a = 1.0;
+
+    // 构造Path消息
+    nav_msgs::Path path;
+    path.header.frame_id = "camera_init";
+    path.header.stamp = ros::Time::now();
+
+    // 遍历每个曲线段，生成Marker和Path消息
+    for (size_t i = 0; i < coefficientMatrix.rows(); i += 6)
+    {
+        // 获取当前曲线段的系数
+        Eigen::Vector3d a = coefficientMatrix.row(i + 0);
+        Eigen::Vector3d b = coefficientMatrix.row(i + 1);
+        Eigen::Vector3d c = coefficientMatrix.row(i + 2);
+        Eigen::Vector3d d = coefficientMatrix.row(i + 3);
+        Eigen::Vector3d e = coefficientMatrix.row(i + 4);
+        Eigen::Vector3d f = coefficientMatrix.row(i + 5);
+
+        // 生成当前曲线段的轨迹点
+        std::vector<Eigen::Vector3d> segmentPoints;
+        for (double t = 0.0; t <= timeVector[i]; t += 0.001)
+        {
+            double t2 = t * t;
+            double t3 = t2 * t;
+            double t4 = t3 * t;
+            double t5 = t4 * t;
+
+            Eigen::Vector3d point = a + b * t + c * t2 + d * t3 + e * t4 + f * t5;
+            segmentPoints.push_back(point);
+        }
+
+        // // 将当前曲线段的轨迹点添加到Marker消息中
+        // for (const auto& point : segmentPoints)
+        // {
+        //     geometry_msgs::Point markerPoint;
+        //     markerPoint.x = point.x();
+        //     markerPoint.y = point.y();
+        //     markerPoint.z = point.z();
+        //     marker.points.push_back(markerPoint);
+        // }
+
+        // 将当前曲线段的轨迹点添加到Path消息中
+        for (const auto& point : segmentPoints)
+        {
+            geometry_msgs::PoseStamped pose;
+            pose.pose.position.x = point.x();
+            pose.pose.position.y = point.y();
+            pose.pose.position.z = point.z();
+            path.poses.push_back(pose);
+        }
+    }
+
+    // 发布Marker和Path消息
+    // markerPub.publish(marker);
+    traj_vis_pub->publish(path);
+}
+
 }  // namespace visualization
 }  // namespace OAC

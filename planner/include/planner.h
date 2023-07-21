@@ -203,16 +203,41 @@ protected:
 
 class Minimum_jerk
 {
-private:
-    // std::vector<Eigen::Vector3d> points;
-
 public:
     Minimum_jerk(/* args */);
     ~Minimum_jerk();
 
-    void solve_minimum_jerk(std::vector<Eigen::Vector3d> points);
+    void solve_minimum_jerk(const std::vector<Eigen::Vector3d> &points, 
+                            const Eigen::Vector3d &tart_vel,
+                            const Eigen::Vector3d &start_acc,
+                            Eigen::MatrixX3d &coefficientMatrix
+                            );
+    void getTimeVector(std::vector<Eigen::Vector3d> points, double max_vel, double max_acc);
+    inline double timeTrapzVel(const double dist,
+                    const double vel,
+                    const double acc)
+    {
+        const double t = vel / acc;
+        const double d = 0.5 * acc * t * t;
 
-    double cost_func = 0.0;
+        if (dist < d + d)
+        {
+            return 4.0 * sqrt(dist / acc);
+        }
+        else
+        {
+            return 4.0 * t + (dist - 2.0 * d) / vel;
+        }
+    };
+
+
+    std::vector<Eigen::Vector3d> waypoints;
+    std::vector<double> timeVector;
+    Eigen::Vector3d start_vel;
+    Eigen::Vector3d start_acc;
+    ros::Publisher* traj_jerk_vis_pub_=NULL;
+    ros::Publisher* waypoints_jerk_vis_pub=NULL;
+
 };
 
 }
