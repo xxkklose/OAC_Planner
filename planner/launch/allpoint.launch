@@ -13,8 +13,8 @@
 
   <node pkg="planner" type="global_planning_node" name="global_planning_node" output="screen" required = "true">
       <remap from="~waypoints"       to="/waypoint_generator/waypoints"/>
-      <remap from="~map"             to="/Laser_map"/> 
-      <!-- <remap from="~map"             to="/livox_total_point"/>  -->
+      <!-- <remap from="~map"             to="/Laser_map"/>  -->
+      <remap from="~map"             to="/livox_total_point"/> 
 
       <rosparam command="load" file="$(find planner)/config/for_simulation/map1.yaml"/>
   </node>

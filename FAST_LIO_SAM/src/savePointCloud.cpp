@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     
     ros::Subscriber sub_origin = nh.subscribe<sensor_msgs::PointCloud2>("/Laser_map", 100, originCallBack);
 
-    pub_total = nh.advertise<sensor_msgs::PointCloud2>("livox_total_point", 1);
+    pub_total = nh.advertise<sensor_msgs::PointCloud2>("/livox_total_point", 1);
 
     ros::spin();
     return 0;
