@@ -2505,6 +2505,21 @@ int main(int argc, char **argv)
         pcl::PCDWriter pcd_writer;
         cout << "current scan saved to /PCD/" << file_name << endl;
         pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
+
+        // save all pointcloud and publish to topic /livox_total_point
+
+        // // 创建一个PointCloud2消息
+        // sensor_msgs::PointCloud2 cloud_msg;
+
+        // // 将pcl::PointCloud<pcl::PointXYZ>转换为sensor_msgs::PointCloud2
+        // pcl::toROSMsg(*pcl_wait_save, cloud_msg);
+        // // 填充PointCloud2消息的头部信息（frame_id、timestamp等）
+
+        // cloud_msg.header.frame_id = "camera_init"; // 设置坐标系
+        // cloud_msg.header.stamp = ros::Time::now(); // 设置时间戳
+
+        // // 发布PointCloud2消息
+        // pub_total.publish(cloud_msg);
     }
 
     fout_out.close();

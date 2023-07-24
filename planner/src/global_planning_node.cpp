@@ -225,7 +225,7 @@ void findSolution()
  */
 void callPlanner()
 {
-  ROS_WARN("access callPlanner");
+  // ROS_WARN("access callPlanner");
   static double init_time_cost = 0.0;
   if (!world->has_map_)
     return;
@@ -299,6 +299,7 @@ int main(int argc, char** argv)
 
   // // Initialization
   world = new World(resolution);
+  
   pf_rrt_star = new PFRRTStar(h_surf_car, world);
 
   // Set argument of PF-RRT*
@@ -365,15 +366,9 @@ int main(int argc, char** argv)
     mj.start_acc = rotationMatrix * (0.01*unit_vector);
     // mj.start_vel = rotationMatrix * unit_vector;
     // mj.start_acc = rotationMatrix * unit_vector;
-    outputFile.open("/home/parallels/1.txt", std::ios::app);
-    if(outputFile.is_open()){
-      // outputFile << "start_pt： x " << start_pt.x << " | y " << start_pt.y << " | z " << start_pt.z << std::endl;
-      outputFile << "start_pt：  " << start_pt << std::endl;
-      outputFile << "pose_msg.pose.position.x " << pose_msg.pose.position.x<< " | y " << pose_msg.pose.position.y << " | z " << pose_msg.pose.position.z << std::endl;
-    }
-    outputFile.close();
-
     pose_pub_to_control.publish(pose_msg);
+
+    ROS_WARN("second resolution_ : %f", world->resolution_);
 
     // Execute the callback functions to update the grid map and check if there's a new goal
     ros::spinOnce();

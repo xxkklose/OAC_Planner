@@ -31,10 +31,6 @@ void originCallBack(const sensor_msgs::PointCloud2ConstPtr& msg){
         continue;
       }
     }
-    // ROS_WARN("here");
-    // std::cout<< transform.getOrigin().x() <<std::endl;
-    // std::cout<< transform.getOrigin().y() <<std::endl;
-    // std::cout<< transform.getOrigin().z() <<std::endl;
     double z_threshold = transform.getOrigin().z();
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PassThrough<pcl::PointXYZ> pass;
