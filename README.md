@@ -10,7 +10,7 @@ This project is a **planning algorithm** for **crawler robots** with swing arms 
 #### 1.1 Ubuntu and ROS
 Ubuntu >= 18.04
 
-ROS >= Melodic. [ROS Installation](http://wiki.ros.org/ROS/Installation).
+ROS >= noetic. [ROS Installation](http://wiki.ros.org/ROS/Installation).
 
 #### 1.2. PCL && Eigen
 PCL >= 1.8, Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
@@ -24,17 +24,30 @@ Remarks:
 
 The overall planner is based on the FAST_LIO and LIO_SAM SLAM method to complete the positioning and mapping, and the FAST_LIO is completely based on the Livox series of radars, so if you use the SLAM algorithm in the project or other SLAM algorithms based on Livox radar, you need to install Livox ROS Driver.
 
-#### 1.4 Necessary Package
+
+#### 1.4 GTSAM
+
+Gtsam >= 4.0.0 Follow [Gtsam Installation](https://github.com/borglab/gtsam).
+
+#### 1.5 Necessary Package
 
 ```
-sudo apt-get install ros-melodic-ompl
-sudo apt-get install ros-melodic-robot-state-publisher*
-sudo apt-get install ros-melodic-joint-state-controller*
-sudo apt-get install ros-melodic-controller*
-sudo apt-get install ros-melodic-velocity-controllers*
-sudo apt-get install ros-melodic-eigen*
-sudo apt-get install ros-melodic-velodyne*
+sudo apt-get install ros-noetic-ompl
+sudo apt-get install ros-noetic-robot-state-publisher*
+sudo apt-get install ros-noetic-joint-state-controller*
+sudo apt-get install ros-noetic-controller*
+sudo apt-get install ros-noetic-velocity-controllers*
+sudo apt-get install ros-noetic-eigen*
+sudo apt-get install ros-noetic-velodyne*
 pip install casadi
+
+
+sudo apt-get install ros-melodic-geographic-*
+sudo apt-get install geographiclib-*
+sudo apt-get install libgeographic-*
+
+sudo apt-get install ros-noetic-rviz-visual-tool
+
 ```
 
 ### Installing
