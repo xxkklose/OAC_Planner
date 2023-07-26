@@ -3,3 +3,7 @@
 ![curve error](./planner/doc/Update%20Record/image.png)
 2. 在生成曲线的过程之中,有些时候容易崩溃,还需要查明bug问题并解决.
 3. 更新Readme.md
+
+## 7.26日工作记录
+1. 实现了Multi-thread优化全部点云的保存功能,已经在数据集上实现,进一步在实机上进行验证.
+2. 数据集上显示结果为CPU占用率为15-20%,GPU占用率为40-50%,理论上使用std::thread不会对GPU进行利用,是否是由于Orin平台本身对于这种多线程进行优化.
