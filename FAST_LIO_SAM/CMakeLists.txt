@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 2.8.3)
-project(fast_lio_sam)
+cmake_minimum_required(VERSION 3.14)
+project(fast_lio_sam LANGUAGES CUDA)
 
 SET(CMAKE_BUILD_TYPE "Debug")  
 
@@ -109,7 +109,10 @@ catkin_package(
 add_library(ikd_Tree include/ikd-Tree/ikd_Tree.cpp)
 add_library(preprocess  src/preprocess.cpp)
 add_executable(fastlio_sam_mapping src/laserMapping.cpp)
-add_executable(savePointCloud src/savePointCloud.cpp)
+# add_executable(fastlio_sam_mapping src/laserMapping.cu)
+# add_executable(savePointCloud src/savePointCloud.cpp)
 target_link_libraries(fastlio_sam_mapping ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PYTHON_LIBRARIES}  ${GeographicLib_LIBRARIES} ikd_Tree preprocess gtsam) 
-target_link_libraries(savePointCloud ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PYTHON_LIBRARIES}  ${GeographicLib_LIBRARIES} ikd_Tree preprocess gtsam) 
+# target_link_libraries(fastlio_sam_mapping_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PYTHON_LIBRARIES}  ${GeographicLib_LIBRARIES} ikd_Tree preprocess gtsam) 
+# target_link_libraries(savePointCloud ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PYTHON_LIBRARIES}  ${GeographicLib_LIBRARIES} ikd_Tree preprocess gtsam) 
 target_include_directories(fastlio_sam_mapping PRIVATE ${PYTHON_INCLUDE_DIRS})
+# target_include_directories(fastlio_sam_mapping_test PRIVATE ${PYTHON_INCLUDE_DIRS})

@@ -1,5 +1,9 @@
-cmake_minimum_required(VERSION 3.0.2)
-project(planner)
+cmake_minimum_required(VERSION 3.14)
+project(planner LANGUAGES CXX CUDA)
+
+if(CUDA_ENABLED)
+  enable_language(CUDA)
+endif()
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)

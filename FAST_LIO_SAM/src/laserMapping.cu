@@ -109,7 +109,12 @@
 #include <fstream>
 #include <iomanip>
 
+// using cuda
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
 // using namespace gtsam;
+
 
 #define INIT_TIME (0.1)
 #define LASER_POINT_COV (0.001)
@@ -2108,38 +2113,6 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
     solve_time += omp_get_wtime() - solve_start_;
 }
 
-void savePointCloud(const ros::Publisher &pubLivoxTotalPoint){
-    
-    int size = feats_undistort->points.size();
-    PointCloudXYZI::Ptr laserCloudWorld(
-        new PointCloudXYZI(size, 1));
-
-    for (int i = 0; i < size; i++)
-    {
-        RGBpointBodyToWorld(&feats_undistort->points[i],
-                            &laserCloudWorld->points[i]);
-    }
-    *pcl_wait_save += *laserCloudWorld;
-
-    sensor_msgs::PointCloud2 cloud_msg;
-    // 将pcl::PointCloud<pcl::PointXYZ>转换为sensor_msgs::PointCloud2
-    pcl::toROSMsg(*pcl_wait_save, cloud_msg);
-    // 填充PointCloud2消息的头部信息（frame_id、timestamp等）
-    cloud_msg.header.frame_id = "camera_init"; // 设置坐标系
-    cloud_msg.header.stamp = ros::Time::now(); // 设置时间戳
-    
-    pubLivoxTotalPoint.publish(cloud_msg);
-}
-
-void pubTotalPoint(const ros::Publisher &pubLivoxTotalPoint){
-    ros::Rate rate(10); //   频率
-    while (ros::ok())
-    {
-        rate.sleep();
-        savePointCloud(pubLivoxTotalPoint); 
-    }
-}
-
 int main(int argc, char **argv)
 {
     // allocateMemory();
@@ -2187,6 +2160,7 @@ int main(int argc, char **argv)
     nh.param<float>("odometrySurfLeafSize", odometrySurfLeafSize, 0.2);
     nh.param<float>("mappingCornerLeafSize", mappingCornerLeafSize, 0.2);
     nh.param<float>("mappingSurfLeafSize", mappingSurfLeafSize, 0.2);
+
     nh.param<float>("z_tollerance", z_tollerance, FLT_MAX);
     nh.param<float>("rotation_tollerance", rotation_tollerance, FLT_MAX);
 
@@ -2305,7 +2279,6 @@ int main(int argc, char **argv)
     ros::Publisher pubLaserCloudMap = nh.advertise<sensor_msgs::PointCloud2>("/Laser_map", 100000);                    //  no used
     ros::Publisher pubOdomAftMapped = nh.advertise<nav_msgs::Odometry>("/Odometry", 100000);
     ros::Publisher pubPath = nh.advertise<nav_msgs::Path>("/path", 1e00000);
-    ros::Publisher pubLivoxTotalPoint = nh.advertise<sensor_msgs::PointCloud2>("/livox_total_point", 10);
 
     ros::Publisher pubPathUpdate = nh.advertise<nav_msgs::Path>("fast_lio_sam/path_update", 100000);                   //  isam更新后的path
     pubGnssPath = nh.advertise<nav_msgs::Path>("/gnss_path", 100000);
@@ -2331,7 +2304,6 @@ int main(int argc, char **argv)
 
     // 回环检测线程
     std::thread loopthread(&loopClosureThread);
-    std::thread thread_pubTotalPoint(&pubTotalPoint, pubLivoxTotalPoint);
 
     //------------------------------------------------------------------------------------------------------
     signal(SIGINT, SigHandle);
@@ -2538,6 +2510,21 @@ int main(int argc, char **argv)
         pcl::PCDWriter pcd_writer;
         cout << "current scan saved to /PCD/" << file_name << endl;
         pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
+
+        // save all pointcloud and publish to topic /livox_total_point
+
+        // // 创建一个PointCloud2消息
+        // sensor_msgs::PointCloud2 cloud_msg;
+
+        // // 将pcl::PointCloud<pcl::PointXYZ>转换为sensor_msgs::PointCloud2
+        // pcl::toROSMsg(*pcl_wait_save, cloud_msg);
+        // // 填充PointCloud2消息的头部信息（frame_id、timestamp等）
+
+        // cloud_msg.header.frame_id = "camera_init"; // 设置坐标系
+        // cloud_msg.header.stamp = ros::Time::now(); // 设置时间戳
+
+        // // 发布PointCloud2消息
+        // pub_total.publish(cloud_msg);
     }
 
     fout_out.close();
@@ -2564,7 +2551,6 @@ int main(int argc, char **argv)
 
     startFlag = false;
     loopthread.join(); //  分离线程
-    thread_pubTotalPoint.join();
 
     return 0;
 }
