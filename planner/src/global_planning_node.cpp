@@ -225,7 +225,6 @@ void findSolution()
  */
 void callPlanner()
 {
-  // ROS_WARN("access callPlanner");
   static double init_time_cost = 0.0;
   if (!world->has_map_)
     return;
@@ -367,8 +366,6 @@ int main(int argc, char** argv)
     // mj.start_vel = rotationMatrix * unit_vector;
     // mj.start_acc = rotationMatrix * unit_vector;
     pose_pub_to_control.publish(pose_msg);
-
-    ROS_WARN("second resolution_ : %f", world->resolution_);
 
     // Execute the callback functions to update the grid map and check if there's a new goal
     ros::spinOnce();
