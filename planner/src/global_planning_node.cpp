@@ -368,8 +368,6 @@ int main(int argc, char** argv)
     // mj.start_acc = rotationMatrix * unit_vector;
     pose_pub_to_control.publish(pose_msg);
 
-    ROS_WARN("second resolution_ : %f", world->resolution_);
-
     // Execute the callback functions to update the grid map and check if there's a new goal
     ros::spinOnce();
     // Call the PF-RRT* to work
