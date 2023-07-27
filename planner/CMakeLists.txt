@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
-project(planner LANGUAGES CXX CUDA)
+# project(planner LANGUAGES CXX CUDA)
+project(planner LANGUAGES CXX)
 
 if(CUDA_ENABLED)
   enable_language(CUDA)
