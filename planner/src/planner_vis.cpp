@@ -52,7 +52,6 @@ void visWorld(World* world, Publisher* world_vis_pub)
 
   cloud_vis.width = cloud_vis.points.size();
   cloud_vis.height = 1;
-  ROS_WARN("%f", world->resolution_);
   cloud_vis.is_dense = true;
 
   sensor_msgs::PointCloud2 map_vis;

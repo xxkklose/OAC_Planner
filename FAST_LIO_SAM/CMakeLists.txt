@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 project(fast_lio_sam LANGUAGES CUDA)
+# project(fast_lio_sam)
 
 SET(CMAKE_BUILD_TYPE "Debug")  
 
