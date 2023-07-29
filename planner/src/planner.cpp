@@ -368,9 +368,8 @@ Vector2d PFRRTStar::sample()
     {
         case Global:
         {
-            // 减少从起始点开始采样距离较小的问题
-            // if(!path_.nodes_.empty()) point_sample=project2plane(sampleInEllipsoid());
-            // else
+            if(!path_.nodes_.empty()) point_sample=project2plane(sampleInEllipsoid());
+            else
                 point_sample=(getRandomNum() < goal_biased_ )?project2plane(node_target_->position_):getRandom2DPoint();
         }
         break;
