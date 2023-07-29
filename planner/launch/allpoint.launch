@@ -32,11 +32,11 @@
       <param name="map/local_z_u"       value="0.4"/>
   </node>
 
-  <!-- <node pkg="gpr" type="gpr_path" name="gpr_path" output="screen" required="true">
+  <node pkg="gpr" type="gpr_path" name="gpr_path" output="screen" required="true">
       <param name="file/cfg_path" type="string" value="$(find gpr)/config/hyperparam.txt"/>
-  </node> -->
-  <!-- <node name="local_planner" pkg="local_planner" type="local_planner.py" launch-prefix="gnome-terminal -x">
-  </node> -->
+  </node>
+  <node name="local_planner" pkg="local_planner" type="local_planner.py" launch-prefix="gnome-terminal -x">
+  </node>
 
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find planner)/config/for_simulation/simulation.rviz" required="true"/>
 </launch>

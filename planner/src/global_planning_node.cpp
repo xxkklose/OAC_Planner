@@ -238,7 +238,8 @@ void callPlanner()
     timeval end;
     gettimeofday(&end, NULL);
     init_time_cost = 1000 * (end.tv_sec - start.tv_sec) + 0.001 * (end.tv_usec - start.tv_usec);
-    if (pf_rrt_star->state() == WithoutGoal && (int)(pf_rrt_star->tree().size() < 3000))
+    if (pf_rrt_star->state() == WithoutGoal)
+    // if (pf_rrt_star->state() == WithoutGoal && (int)(pf_rrt_star->tree().size() < 3000))
     {
       int max_iter = 550;
       double max_time = 100.0;
