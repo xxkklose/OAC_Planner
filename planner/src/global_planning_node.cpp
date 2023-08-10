@@ -157,11 +157,11 @@ void findSolution()
       mj.waypoints.push_back(node->position_);
     }
     // ROS_WARN("1");
-    // mj.waypoints.push_back(start_pt);
-    // Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
+    mj.waypoints.push_back(start_pt);
+    Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
     // mj.getTimeVector(mj.waypoints,0.4,0.2); //TODO:max_vel, max_acc
-    // // mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
-    // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix); //暂时先用零向量代替
+    // mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
+    // // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix); //暂时先用零向量代替
 
 
     // visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
@@ -185,11 +185,11 @@ void findSolution()
       mj.waypoints.push_back(node->position_);
     }
 
-    // mj.waypoints.push_back(start_pt);
-    // Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
+    mj.waypoints.push_back(start_pt);
+    Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
     // mj.getTimeVector(mj.waypoints,0.4,0.2); //TODO:max_vel, max_acc
-    // // mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
-    // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix);
+    // mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
+    // // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix);
 
     // visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 

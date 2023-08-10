@@ -109,6 +109,9 @@
 #include <fstream>
 #include <iomanip>
 
+#include <tf/transform_listener.h>
+#include <pcl/filters/passthrough.h>
+
 // using namespace gtsam;
 
 #define INIT_TIME (0.1)
@@ -200,6 +203,8 @@ pcl::PointCloud<PointTypePose>::Ptr copy_cloudKeyPoses6D(new pcl::PointCloud<Poi
 
 pcl::PointCloud<PointTypePose>::Ptr fastlio_unoptimized_cloudKeyPoses6D(new pcl::PointCloud<PointTypePose>()); //  存储fastlio 未优化的位姿
 pcl::PointCloud<PointTypePose>::Ptr gnss_cloudKeyPoses6D(new pcl::PointCloud<PointTypePose>()); //  gnss 轨迹
+
+PointTypePose filter_thisPose6D;
 
 // voxel filter paprams
 float odometrySurfLeafSize;
@@ -816,6 +821,8 @@ void saveKeyFramesAndFactor()
     surfCloudKeyFrames.push_back(thisSurfKeyFrame);
 
     updatePath(thisPose6D); //  可视化update后的path
+
+    filter_thisPose6D = thisPose6D; //for filter
 }
 
 void recontructIKdTree(){
@@ -1560,6 +1567,7 @@ void map_incremental()
 
 PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI(500000, 1));
 PointCloudXYZI::Ptr pcl_wait_save(new PointCloudXYZI());
+pcl::PointCloud<pcl::PointXYZ>::Ptr pclnoi_wait_save(new pcl::PointCloud<pcl::PointXYZ>());
 void publish_frame_world(const ros::Publisher &pubLaserCloudFull)         //    将稠密点云从 imu convert to  world
 {
     if (scan_pub_en)
@@ -2108,22 +2116,68 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
     solve_time += omp_get_wtime() - solve_start_;
 }
 
+bool isInsideSurround(const pcl::PointXYZ pi, const double& x, const double& y, const double& z)
+{
+    return (pi.x<=(x + 0.3) && pi.x>=(x - 0.7) && 
+           pi.y<=(y + 0.3) && pi.y>=(y - 0.3) &&
+           pi.z<=(z + 0.3) && pi.z>=(z - 0.3));
+
+}
+
 void savePointCloud(const ros::Publisher &pubLivoxTotalPoint){
     
     int size = feats_undistort->points.size();
     PointCloudXYZI::Ptr laserCloudWorld(
         new PointCloudXYZI(size, 1));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZ>(size, 1));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
-    for (int i = 0; i < size; i++)
+    tf::TransformListener listener;
+    tf::StampedTransform transform;
+    while (true && ros::ok())
+    {
+      try
+      {
+        listener.lookupTransform("camera_init", "body", ros::Time(0), transform);  //查询变换
+        break;
+      }
+      catch (tf::TransformException& ex)
+      {
+        continue;
+      }
+    }
+    double z_threshold = transform.getOrigin().z();
+    double y_threshold = transform.getOrigin().y();
+    double x_threshold = transform.getOrigin().x();
+    for (int i = 0,j=0; i < size; i++)
     {
         RGBpointBodyToWorld(&feats_undistort->points[i],
-                            &laserCloudWorld->points[i]);
+                &laserCloudWorld->points[i]);
+        input_cloud->points[i].x = feats_undistort->points[i].x;
+        input_cloud->points[i].y = feats_undistort->points[i].y;
+        input_cloud->points[i].z = feats_undistort->points[i].z;
     }
-    *pcl_wait_save += *laserCloudWorld;
+    //z方向过滤
+    pcl::PassThrough<pcl::PointXYZ> pass;
+    pass.setInputCloud(input_cloud);
+    pass.setFilterFieldName("z");
+    pass.setFilterLimits(-999999999, z_threshold + 2);  
+    pass.filter(*filtered_cloud);
+
+    // *pclnoi_wait_save += *filtered_cloud;
+    // *pclnoi_wait_save -= *cropped_cloud;
+
+    for(const pcl::PointXYZ pi:*filtered_cloud){
+        if(isInsideSurround(pi, x_threshold, y_threshold, z_threshold)) continue;
+        else{
+            pclnoi_wait_save->push_back(pi);
+        }
+    }
+
 
     sensor_msgs::PointCloud2 cloud_msg;
     // 将pcl::PointCloud<pcl::PointXYZ>转换为sensor_msgs::PointCloud2
-    pcl::toROSMsg(*pcl_wait_save, cloud_msg);
+    pcl::toROSMsg(*pclnoi_wait_save, cloud_msg);
     // 填充PointCloud2消息的头部信息（frame_id、timestamp等）
     cloud_msg.header.frame_id = "camera_init"; // 设置坐标系
     cloud_msg.header.stamp = ros::Time::now(); // 设置时间戳
@@ -2135,7 +2189,7 @@ void pubTotalPoint(const ros::Publisher &pubLivoxTotalPoint){
     ros::Rate rate(10); //   频率
     while (ros::ok())
     {
-        rate.sleep();
+        // rate.sleep();
         savePointCloud(pubLivoxTotalPoint); 
     }
 }
