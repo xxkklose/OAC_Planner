@@ -21,7 +21,7 @@ PFRRTStar::~PFRRTStar()
 
 void PFRRTStar::initWithGoal(const Vector3d &start_pos,const Vector3d &end_pos)
 {
-    Vector2d last_end_pos_2D=end_pos_2D_;
+    Vector2d last_end_pos_2D=end_pos_2D_; 
     PlanningState last_planning_state=planning_state_;
     curr_iter_=0;
     curr_time_=0.0;
@@ -425,6 +425,9 @@ Node* PFRRTStar::fitPlane(const Vector2d &p_original)
     if(world_->project2surface(p_original(0),p_original(1),&p_surface))
     {
         node=new Node;
+        // default parameters: 
+        //     FitPlaneArg fit_plane_arg_={1.0,2000.0,0.0014,0.4,0.25,0.4,0.1152};
+        //     double radius_fit_plane_=1.0;
         node->plane_=new Plane(p_surface,world_,radius_fit_plane_,fit_plane_arg_);
         node->position_ = p_surface + h_surf_ * node->plane_->normal_vector;
     }

@@ -36,34 +36,38 @@ Plane::Plane(){}
 Plane::Plane(const Eigen::Vector3d &p_surface,World* world,const double &radius,const FitPlaneArg &arg)
 {
     init_coord=project2plane(p_surface);
+    // Converts the coordinates of the point to the grid center coordinates under World
     Vector3d ball_center = world->coordRounding(p_surface);
     float resolution = world->getResolution();
 
     int fit_num=static_cast<int>(radius/resolution);
     Matrix<bool,Dynamic,Dynamic> vac(2*fit_num+1,2*fit_num+1);
     int vac_cout_init=(2*fit_num+1)*(2*fit_num+1);
-    for(int i = -fit_num;i <= fit_num;i++)
-    {
-        for(int j = -fit_num;j <= fit_num;j++)
-        {
-            vac(i+fit_num,j+fit_num)=false;
-            for(int k = -3;k <= 3;k++)
-            { 
-                Vector3d point=ball_center+resolution*Vector3d(i,j,k);
-                
-                if(world->isInsideBorder(point) && !world->isFree(point))
-                {
+    // Loop over each cell in the vac matrix
+    for (int i = -fit_num; i <= fit_num; i++) {
+        for (int j = -fit_num; j <= fit_num; j++) {
+            // Initialize the vac matrix cell to false
+            vac(i + fit_num, j + fit_num) = false;
+
+            // Traverse the points around the cube
+            for (int k = -3; k <= 3; k++) {
+                Vector3d point = ball_center + resolution * Vector3d(i, j, k);
+
+                // Check if the point is inside the world's borders and not free
+                if (world->isInsideBorder(point) && !world->isFree(point)) {
+                    // Add the point to the plane_pts vector
                     plane_pts.push_back(point);
-                    if(!vac(i+fit_num,j+fit_num))
-                    {
-                        vac(i+fit_num,j+fit_num)=true;
+
+                    // If the vac matrix cell was not set to true before, set it to true and decrement vac_count_init
+                    if (!vac(i + fit_num, j + fit_num)) {
+                        vac(i + fit_num, j + fit_num) = true;
                         vac_cout_init--;
                     }
                 }
             }
         }
     }
-
+    
     size_t pt_num=plane_pts.size();
     Vector3d center;
     for(const auto&pt:plane_pts) center+=pt;
@@ -71,6 +75,7 @@ Plane::Plane(const Eigen::Vector3d &p_surface,World* world,const double &radius,
     MatrixXd A(pt_num,3);
     for(size_t i = 0; i < pt_num; i++) A.row(i)=plane_pts[i]-center;
 
+    //Key point : Planar fitting using SVD
     JacobiSVD<MatrixXd> svd(A,ComputeFullV);
     normal_vector=svd.matrixV().col(2);
     
@@ -143,12 +148,18 @@ void World::clearMap()
             {
                 delete[] grid_map_[i][j];
                 grid_map_[i][j]=NULL;
+                delete[] grid_map_count_[i][j];
+                grid_map_count_[i][j]=NULL;
             }
             delete[] grid_map_[i];
             grid_map_[i]=NULL;
+            delete[] grid_map_count_[i];
+            grid_map_count_[i]=NULL;
         }
         delete[] grid_map_;
         grid_map_=NULL;
+        delete[] grid_map_count_;
+        grid_map_count_=NULL;
     }
 }
 
@@ -192,13 +203,17 @@ void World::initGridMap(const pcl::PointCloud<pcl::PointXYZ> &cloud)
     idx_count_ = ((upperbound_-lowerbound_)/resolution_).cast<int>() + Eigen::Vector3i::Ones();
 
     grid_map_=new bool**[idx_count_(0)];
+    grid_map_count_=new int**[idx_count_(0)];
     for(int i = 0 ; i < idx_count_(0) ; i++)
     {
         grid_map_[i]=new bool*[idx_count_(1)];
+        grid_map_count_[i]=new int*[idx_count_(1)];
         for(int j = 0 ; j < idx_count_(1) ; j++)
         {
             grid_map_[i][j]=new bool[idx_count_(2)];
+            grid_map_count_[i][j]=new int[idx_count_(2)];
             memset(grid_map_[i][j],true,idx_count_(2)*sizeof(bool));
+            memset(grid_map_count_[i][j],0,idx_count_(2)*sizeof(int));
         }
     }
     has_map_=true;
@@ -246,7 +261,35 @@ bool World::collisionFree(const Node* node_start,const Node* node_end)
 void World::setObs(const Vector3d &point)
 {   
     Vector3i idx=coord2index(point);
-    grid_map_[idx(0)][idx(1)][idx(2)]=false;
+    grid_map_count_[idx(0)][idx(1)][idx(2)]++;
+    if(grid_map_count_[idx(0)][idx(1)][idx(2)] >= 3){
+        grid_map_[idx(0)][idx(1)][idx(2)]=false;
+    }
+    // grid_map_[idx(0)][idx(1)][idx(2)]=false;
+}
+
+void World::addObs(const Vector3d &point)
+{
+    Vector3i idx=coord2index(point);
+    int sorrounding_count=0;
+    for(int i=-1;i<=1;i++)
+    {
+        for(int j=-1;j<=1;j++)
+        {
+            for(int k=-1;k<=1;k++)
+            {
+                Vector3i temp_idx=idx+Vector3i(i,j,k);
+                if(isInsideBorder(temp_idx) && !grid_map_[idx(0)+i][idx(1)+j][idx(2)+k])
+                {
+                    sorrounding_count++;
+                }
+            }
+        }
+    }
+    if(sorrounding_count >= 4)
+    {
+        grid_map_[idx(0)][idx(1)][idx(2)]=false;
+    }
 }
 
 bool World::isFree(const Vector3d &point)

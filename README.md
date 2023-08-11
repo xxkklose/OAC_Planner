@@ -42,11 +42,11 @@ sudo apt-get install ros-noetic-velodyne*
 pip install casadi
 
 
-sudo apt-get install ros-melodic-geographic-*
+sudo apt-get install ros-noetic-geographic-*
 sudo apt-get install geographiclib-*
 sudo apt-get install libgeographic-*
 
-sudo apt-get install ros-noetic-rviz-visual-tool
+sudo apt-get install ros-noetic-rviz-visual-tools
 
 ```
 

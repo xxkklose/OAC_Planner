@@ -122,6 +122,8 @@ public:
      */
     void initGridMap(const Eigen::Vector3d &lowerbound,const Eigen::Vector3d &upperbound);
     void setObs(const Eigen::Vector3d &point);
+    void addObs(const Eigen::Vector3d &point);
+    
 
     /**
      * @brief Find the grid closet to the point and return the coordinate of its center
@@ -195,6 +197,7 @@ public:
     }
 //protected:
     bool ***grid_map_=NULL;
+    int ***grid_map_count_=NULL;
 
     float resolution_;
 

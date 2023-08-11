@@ -84,7 +84,15 @@ void rcvPointCloudCallBack(const sensor_msgs::PointCloud2& pointcloud_map)
   for (const auto& pt : cloud)
   {
     Vector3d obstacle(pt.x, pt.y, pt.z);
+    // if(grid_map_count_[idx(0)][idx(1)][idx(2)] >= 1){
+    //     grid_map_[idx(0)][idx(1)][idx(2)]=false;
+    // }
     world->setObs(obstacle);
+  }
+  for (const auto& pt : cloud)
+  {
+    Vector3d obstacle(pt.x, pt.y, pt.z);
+    world->addObs(obstacle);
   }
   visWorld(world, &grid_map_vis_pub);
 }
