@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /AllMap1
         - /AllMap1/Autocompute Value Bounds1
         - /Marker1/Namespaces1
       Splitter Ratio: 0.40095847845077515
@@ -23,7 +24,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: AllMap
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -43,8 +44,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 2.4921960830688477
-        Min Value: -2.707803964614868
+        Max Value: 2.011198043823242
+        Min Value: -1.1888020038604736
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -61,7 +62,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.10000000149011612
+      Size (m): 0.05000000074505806
       Style: Boxes
       Topic: /global_planning_node/grid_map_vis
       Unreliable: false
@@ -119,6 +120,8 @@ Visualization Manager:
           Value: true
         base_link:
           Value: true
+        body:
+          Value: true
         camera_init:
           Value: true
         world:
@@ -135,7 +138,8 @@ Visualization Manager:
             {}
         world:
           camera_init:
-            {}
+            body:
+              {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -293,10 +297,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 187.6082763671875
+      Scale: 149.60057067871094
       Target Frame: aft_mapped
-      X: 5.513238906860352
-      Y: -1.4555193185806274
+      X: 3.2697784900665283
+      Y: -0.011548064649105072
     Saved:
       - Class: rviz/Orbit
         Distance: 79.24484252929688
