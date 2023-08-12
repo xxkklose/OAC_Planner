@@ -219,6 +219,11 @@ void World::initGridMap(const pcl::PointCloud<pcl::PointXYZ> &cloud)
     has_map_=true;
 }
  
+/*
+    * @brief: judge the route from node_start to node_end is collision free or not
+    * @param: node_start: start node
+    * @param: node_end: end node
+*/
 bool World::collisionFree(const Node* node_start,const Node* node_end) 
 {
     Vector3d e_z,e_y,e_x;
@@ -262,10 +267,10 @@ void World::setObs(const Vector3d &point)
 {   
     Vector3i idx=coord2index(point);
     grid_map_count_[idx(0)][idx(1)][idx(2)]++;
-    if(grid_map_count_[idx(0)][idx(1)][idx(2)] >= 3){
-        grid_map_[idx(0)][idx(1)][idx(2)]=false;
-    }
-    // grid_map_[idx(0)][idx(1)][idx(2)]=false;
+    // if(grid_map_count_[idx(0)][idx(1)][idx(2)] >= 3){
+    //     grid_map_[idx(0)][idx(1)][idx(2)]=false;
+    // }
+    grid_map_[idx(0)][idx(1)][idx(2)]=false;
 }
 
 void World::addObs(const Vector3d &point)

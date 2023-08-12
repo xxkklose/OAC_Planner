@@ -19,6 +19,12 @@ PFRRTStar::~PFRRTStar()
     node_target_=NULL;
 }
 
+/*
+    * @brief: Initialize the planner
+    * @param: start_pos: the start position of the robot
+    * @param: end_pos: the end position of the robot
+    * @return: void
+*/
 void PFRRTStar::initWithGoal(const Vector3d &start_pos,const Vector3d &end_pos)
 {
     Vector2d last_end_pos_2D=end_pos_2D_; 
@@ -27,6 +33,7 @@ void PFRRTStar::initWithGoal(const Vector3d &start_pos,const Vector3d &end_pos)
     curr_time_=0.0;
     end_pos_2D_=project2plane(end_pos);
 
+    // If the start position can't fit a plane, then the planning_state_ is invalid
     Node* node_origin=fitPlane(start_pos);
 
     if(node_origin==NULL)
@@ -34,7 +41,8 @@ void PFRRTStar::initWithGoal(const Vector3d &start_pos,const Vector3d &end_pos)
         planning_state_=Invalid;
         return;
     }
-    
+
+    // judge whether the end position can fit a plane
     Node* node_target=fitPlane(end_pos);
 
     planning_state_=(node_target==NULL)?Roll:Global;
@@ -43,6 +51,8 @@ void PFRRTStar::initWithGoal(const Vector3d &start_pos,const Vector3d &end_pos)
 
     bool inherit_flag=false;
 
+    // according to planning_state_ and last_planning_state, decide whether to 
+    // inherit the tree or path
     switch(planning_state_)
     {
         case Global:
@@ -86,11 +96,12 @@ void PFRRTStar::initWithGoal(const Vector3d &start_pos,const Vector3d &end_pos)
         break;
     }
 
+    // If the tree is not inherited, then clean the tree and initialize a new tree and push back the node_origin
     if(!inherit_flag)
     {
-        path_=Path();
-        clean_vector(tree_);
-        node_origin_=node_origin;
+        path_=Path(); // initialize a path
+        clean_vector(tree_);  
+        node_origin_=node_origin;  
         tree_.push_back(node_origin_);
     }
 
@@ -229,6 +240,9 @@ bool PFRRTStar::inheritTree(Node* new_root)
     return result;
 }
 
+/*
+    @brief: This function is used to inherit the path from the member path_
+*/
 bool PFRRTStar::inheritPath(Node* new_root,Path::Type type)
 {
     bool result=false;
@@ -239,7 +253,8 @@ bool PFRRTStar::inheritPath(Node* new_root,Path::Type type)
         for(size_t i = 0;i < path_.nodes_.size();i++)
         {
             Node* node_now=path_.nodes_[i];
-            tmp_nodes.push_back(fitPlane(node_now->plane_->init_coord));
+            //TODO1: whether to fit the plane of the node instead of using default one
+            tmp_nodes.push_back(fitPlane(node_now->plane_->init_coord)); 
             if(tmp_nodes[i]==NULL || (tmp_nodes.size()>1 && !world_->collisionFree(tmp_nodes[i],tmp_nodes[i-1])))
                 return false;
             //if the distance between the current node and the new root is less
@@ -253,18 +268,18 @@ bool PFRRTStar::inheritPath(Node* new_root,Path::Type type)
         if(result)
         {
             tmp_nodes.push_back(new_root);
-            size_t start_index=(type==Path::Global?1:0);
+            size_t start_index=(type==path::global?1:0);
             for(size_t i=start_index;i<tmp_nodes.size()-1;i++)
             {
                 tmp_nodes[i]->parent_=tmp_nodes[i+1];
                 tmp_nodes[i+1]->children_.push_back(tmp_nodes[i]);
             }
-            path_=Path();
+            path_=path();
             clean_vector(tree_);
             tree_.assign(tmp_nodes.begin()+start_index,tmp_nodes.end());          
             node_origin_=new_root;
-            updateNode(node_origin_);
-            generatePath();
+            updatenode(node_origin_);
+            generatepath();
         }
     }
     return result;
@@ -415,7 +430,11 @@ Vector2d PFRRTStar::steer(const Vector2d &point_rand_projection, const Vector2d 
     return point_new_projection;
 }
 
-// 
+/*
+    * @brief: This function is used to fit the plane of input point, create a node and a plane of the node.
+    * @param: p_original: the original point of plane. 
+    * @return: node: the node of the plane.
+*/
 Node* PFRRTStar::fitPlane(const Vector2d &p_original)
 {
     Node* node = NULL;
@@ -434,6 +453,10 @@ Node* PFRRTStar::fitPlane(const Vector2d &p_original)
     return node;
 }
 
+/*
+    * @brief: This function is used to fit the plane of input node.
+    * @param: node: input node.
+*/
 void PFRRTStar::fitPlane(Node* node)
 {
     Vector2d init_coord=node->plane_->init_coord;
