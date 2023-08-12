@@ -268,18 +268,18 @@ bool PFRRTStar::inheritPath(Node* new_root,Path::Type type)
         if(result)
         {
             tmp_nodes.push_back(new_root);
-            size_t start_index=(type==path::global?1:0);
+            size_t start_index=(type==Path::Global?1:0);
             for(size_t i=start_index;i<tmp_nodes.size()-1;i++)
             {
                 tmp_nodes[i]->parent_=tmp_nodes[i+1];
                 tmp_nodes[i+1]->children_.push_back(tmp_nodes[i]);
             }
-            path_=path();
+            path_=Path();
             clean_vector(tree_);
             tree_.assign(tmp_nodes.begin()+start_index,tmp_nodes.end());          
             node_origin_=new_root;
-            updatenode(node_origin_);
-            generatepath();
+            updateNode(node_origin_);
+            generatePath();
         }
     }
     return result;
