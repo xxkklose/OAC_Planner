@@ -80,6 +80,9 @@
 #include <pcl/filters/filter.h>
 #include <pcl/filters/crop_box.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 
 // gstam
 #include <gtsam/geometry/Rot3.h>
@@ -110,7 +113,6 @@
 #include <iomanip>
 
 #include <tf/transform_listener.h>
-#include <pcl/filters/passthrough.h>
 
 // using namespace gtsam;
 
@@ -170,6 +172,7 @@ pcl::VoxelGrid<PointType> downSizeFilterSurf; //单帧内降采样使用voxel gr
 pcl::VoxelGrid<PointType> downSizeFilterMap;  //未使用
 
 KD_TREE ikdtree;
+KD_TREE ikdtree_vis;
 
 V3F XAxisPoint_body(LIDAR_SP_LEN, 0.0, 0.0);
 V3F XAxisPoint_world(LIDAR_SP_LEN, 0.0, 0.0);
@@ -1852,6 +1855,7 @@ bool savePoseService(fast_lio_sam::save_poseRequest& req, fast_lio_sam::save_pos
 */
 bool saveMapService(fast_lio_sam::save_mapRequest& req, fast_lio_sam::save_mapResponse& res)
 {
+     //TODO: 尝试保存地图
       string saveMapDirectory;
     
       cout << "****************************************************" << endl;
@@ -2130,7 +2134,10 @@ void savePointCloud(const ros::Publisher &pubLivoxTotalPoint){
     PointCloudXYZI::Ptr laserCloudWorld(
         new PointCloudXYZI(size, 1));
     pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZ>(size, 1));
-    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud_downFilted(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud_passThroughed(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud_statisticalOutlierRemovaled(new pcl::PointCloud<pcl::PointXYZ>);
+    PointCloudXYZI::Ptr ikdmap(new PointCloudXYZI());
 
     tf::TransformListener listener;
     tf::StampedTransform transform;
@@ -2151,23 +2158,75 @@ void savePointCloud(const ros::Publisher &pubLivoxTotalPoint){
     double x_threshold = transform.getOrigin().x();
     for (int i = 0,j=0; i < size; i++)
     {
+        // RGBpointBodyToWorld(&featsFromMap->points[i],
         RGBpointBodyToWorld(&feats_undistort->points[i],
                 &laserCloudWorld->points[i]);
-        input_cloud->points[i].x = feats_undistort->points[i].x;
-        input_cloud->points[i].y = feats_undistort->points[i].y;
-        input_cloud->points[i].z = feats_undistort->points[i].z;
+        input_cloud->points[i].x = laserCloudWorld->points[i].x;
+        input_cloud->points[i].y = laserCloudWorld->points[i].y;
+        input_cloud->points[i].z = laserCloudWorld->points[i].z;
     }
+
+   //展开ikdtree的方法
+
+    // ikdtree_vis.PCL_Storage.clear();
+    // ikdtree_vis.flatten(ikdtree.Root_Node, ikdtree_vis.PCL_Storage, NOT_RECORD);
+    // ikdmap->clear();
+    // ikdmap->points = ikdtree_vis.PCL_Storage;
+    // for (int i = 0,j=0; i < ikdmap->points.size(); i++)
+    // {
+    //     // RGBpointBodyToWorld(&feats_undistort->points[i],
+    //     //         &laserCloudWorld->points[i]);
+    //     input_cloud->points[i].x = ikdmap->points[i].x;
+    //     input_cloud->points[i].y = ikdmap->points[i].y;
+    //     input_cloud->points[i].z = ikdmap->points[i].z;
+    // }
+
+    // //saveMapService的方法
+    // pcl::PointCloud<pcl::PointXYZINormal>::Ptr globalSurfCloud(new pcl::PointCloud<pcl::PointXYZINormal>());
+    // pcl::PointCloud<pcl::PointXYZINormal>::Ptr globalSurfCloudDS(new pcl::PointCloud<pcl::PointXYZINormal>());
+    // pcl::PointCloud<pcl::PointXYZINormal>::Ptr globalMapCloud(new pcl::PointCloud<pcl::PointXYZINormal>());
+
+    // // 注意：拼接地图时，keyframe是lidar系，而fastlio更新后的存到的cloudKeyPoses6D 关键帧位姿是body系下的，需要把
+    // //cloudKeyPoses6D  转换为T_world_lidar 。 T_world_lidar = T_world_body * T_body_lidar , T_body_lidar 是外参
+    // for (int i = 0; i < (int)cloudKeyPoses6D->size(); i++) {
+    //     //   *globalCornerCloud += *transformPointCloud(cornerCloudKeyFrames[i],  &cloudKeyPoses6D->points[i]);
+    //     *globalSurfCloud   += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
+    // }
+    // *globalMapCloud += *globalSurfCloud;
+    // for (int i = 0,j=0; i < size; i++)
+    // {
+    //     RGBpointBodyToWorld(&globalMapCloud->points[i],
+    //     // RGBpointBodyToWorld(&feats_undistort->points[i],
+    //             &laserCloudWorld->points[i]);
+    //     input_cloud->points[i].x = laserCloudWorld->points[i].x;
+    //     input_cloud->points[i].y = laserCloudWorld->points[i].y;
+    //     input_cloud->points[i].z = laserCloudWorld->points[i].z;
+    // }
+    // 第一次剔除
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;   //创建滤波器对象
+    sor.setInputCloud (input_cloud);                           //设置待滤波的点云
+    sor.setMeanK (50);                               //设置在进行统计时考虑的临近点个数
+    sor.setStddevMulThresh (1.0);                      //设置判断是否为离群点的阀值，用来倍乘标准差，也就是上面的std_mul
+    sor.filter (*filtered_cloud_statisticalOutlierRemovaled);                    //滤波结果存储到cloud_filtered
+    //降采样
+    pcl::VoxelGrid<pcl::PointXYZ> downSizeFilter;
+    downSizeFilter.setLeafSize(0.1, 0.1, 0.1);
+    downSizeFilter.setInputCloud(filtered_cloud_statisticalOutlierRemovaled);
+    downSizeFilter.filter(*filtered_cloud_downFilted);
+
     //z方向过滤
     pcl::PassThrough<pcl::PointXYZ> pass;
-    pass.setInputCloud(input_cloud);
+    pass.setInputCloud(filtered_cloud_downFilted);
     pass.setFilterFieldName("z");
     pass.setFilterLimits(-999999999, z_threshold + 2);  
-    pass.filter(*filtered_cloud);
+    pass.filter(*filtered_cloud_passThroughed);
+
+    // TODO： 尝试增加增采样
 
     // *pclnoi_wait_save += *filtered_cloud;
     // *pclnoi_wait_save -= *cropped_cloud;
 
-    for(const pcl::PointXYZ pi:*filtered_cloud){
+    for(const pcl::PointXYZ pi:*filtered_cloud_passThroughed){
         if(isInsideSurround(pi, x_threshold, y_threshold, z_threshold)) continue;
         else{
             pclnoi_wait_save->push_back(pi);
@@ -2178,6 +2237,7 @@ void savePointCloud(const ros::Publisher &pubLivoxTotalPoint){
     sensor_msgs::PointCloud2 cloud_msg;
     // 将pcl::PointCloud<pcl::PointXYZ>转换为sensor_msgs::PointCloud2
     pcl::toROSMsg(*pclnoi_wait_save, cloud_msg);
+    // pcl::toROSMsg(*pcl_wait_save, cloud_msg);
     // 填充PointCloud2消息的头部信息（frame_id、timestamp等）
     cloud_msg.header.frame_id = "camera_init"; // 设置坐标系
     cloud_msg.header.stamp = ros::Time::now(); // 设置时间戳
@@ -2189,7 +2249,7 @@ void pubTotalPoint(const ros::Publisher &pubLivoxTotalPoint){
     ros::Rate rate(10); //   频率
     while (ros::ok())
     {
-        // rate.sleep();
+        rate.sleep();
         savePointCloud(pubLivoxTotalPoint); 
     }
 }

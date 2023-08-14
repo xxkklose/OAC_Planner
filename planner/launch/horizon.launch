@@ -1,5 +1,5 @@
 <launch>
-  <include file="$(find fast_lio_sam)/launch/mapping_horizon_indoor.launch">
+  <include file="$(find fast_lio_sam)/launch/mapping_horizon_debug.launch">
 	  <!-- <arg name="rviz" value="false"/> -->
   </include>
 
