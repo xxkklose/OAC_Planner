@@ -172,7 +172,7 @@ pcl::VoxelGrid<PointType> downSizeFilterSurf; //单帧内降采样使用voxel gr
 pcl::VoxelGrid<PointType> downSizeFilterMap;  //未使用
 
 KD_TREE ikdtree;
-KD_TREE ikdtree_vis;
+// KD_TREE ikdtree_vis;
 
 V3F XAxisPoint_body(LIDAR_SP_LEN, 0.0, 0.0);
 V3F XAxisPoint_world(LIDAR_SP_LEN, 0.0, 0.0);
