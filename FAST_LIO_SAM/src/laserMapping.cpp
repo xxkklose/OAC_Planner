@@ -83,6 +83,7 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/surface/mls.h>
 
 // gstam
 #include <gtsam/geometry/Rot3.h>
@@ -2137,6 +2138,8 @@ void savePointCloud(const ros::Publisher &pubLivoxTotalPoint){
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud_downFilted(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud_passThroughed(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud_statisticalOutlierRemovaled(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointNormal> filtered_cloud_MovingLeastSquared;
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
     PointCloudXYZI::Ptr ikdmap(new PointCloudXYZI());
 
     tf::TransformListener listener;
@@ -2208,7 +2211,7 @@ void savePointCloud(const ros::Publisher &pubLivoxTotalPoint){
     sor.setMeanK (50);                               //设置在进行统计时考虑的临近点个数
     sor.setStddevMulThresh (1.0);                      //设置判断是否为离群点的阀值，用来倍乘标准差，也就是上面的std_mul
     sor.filter (*filtered_cloud_statisticalOutlierRemovaled);                    //滤波结果存储到cloud_filtered
-    //降采样
+    // 降采样
     pcl::VoxelGrid<pcl::PointXYZ> downSizeFilter;
     downSizeFilter.setLeafSize(0.1, 0.1, 0.1);
     downSizeFilter.setInputCloud(filtered_cloud_statisticalOutlierRemovaled);
@@ -2216,15 +2219,11 @@ void savePointCloud(const ros::Publisher &pubLivoxTotalPoint){
 
     //z方向过滤
     pcl::PassThrough<pcl::PointXYZ> pass;
-    pass.setInputCloud(filtered_cloud_downFilted);
+    pass.setInputCloud(input_cloud);
     pass.setFilterFieldName("z");
     pass.setFilterLimits(-999999999, z_threshold + 2);  
     pass.filter(*filtered_cloud_passThroughed);
 
-    // TODO： 尝试增加增采样
-
-    // *pclnoi_wait_save += *filtered_cloud;
-    // *pclnoi_wait_save -= *cropped_cloud;
 
     for(const pcl::PointXYZ pi:*filtered_cloud_passThroughed){
         if(isInsideSurround(pi, x_threshold, y_threshold, z_threshold)) continue;
@@ -2233,10 +2232,25 @@ void savePointCloud(const ros::Publisher &pubLivoxTotalPoint){
         }
     }
 
+    // TODO： 尝试增加增采样
+
+    pcl::MovingLeastSquares<pcl::PointXYZ,pcl::PointNormal> mls;
+ 
+    //Step5：设置是否使用多项式拟合提高精度
+    mls.setPolynomialFit(true);
+ 
+    //Step6: 使用MLS进行平顺
+    mls.setInputCloud(pclnoi_wait_save);
+    mls.setPolynomialOrder(2);  //设置多项式的最高阶数为2阶？
+    mls.setSearchMethod(tree);  
+    mls.setSearchRadius(0.03);  //设置在进行Kdtree中K邻域，的查找半径
+ 
+    mls.process(filtered_cloud_MovingLeastSquared);
+
 
     sensor_msgs::PointCloud2 cloud_msg;
     // 将pcl::PointCloud<pcl::PointXYZ>转换为sensor_msgs::PointCloud2
-    pcl::toROSMsg(*pclnoi_wait_save, cloud_msg);
+    pcl::toROSMsg(filtered_cloud_MovingLeastSquared, cloud_msg);
     // pcl::toROSMsg(*pcl_wait_save, cloud_msg);
     // 填充PointCloud2消息的头部信息（frame_id、timestamp等）
     cloud_msg.header.frame_id = "camera_init"; // 设置坐标系
