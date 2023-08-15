@@ -304,6 +304,7 @@ Vector2d PFRRTStar::getRandom2DPoint()
 
 Vector3d PFRRTStar::sampleInEllipsoid()
 {
+    bool disFlag=false;
     float cmin=EuclideanDistance(node_target_,node_origin_);
     Vector3d a_1=(node_target_->position_-node_origin_->position_)/cmin;  
     RowVector3d id_t(1,0,0);
@@ -320,19 +321,24 @@ Vector3d PFRRTStar::sampleInEllipsoid()
     Matrix3d L=Matrix3d::Zero();
     L(0,0)=cbest*0.5,L(1,1)=L(2,2)=sqrt(powf(cbest, 2)-powf(cmin,2))*0.5;
 
-    float theta1=acos(2*getRandomNum()-1);
-    float theta2=2*PI*getRandomNum();
-    float radius=powf(getRandomNum(),1.0/3);
+    Vector3d point;
+    while(!disFlag){
+        float theta1=acos(2*getRandomNum()-1);
+        float theta2=2*PI*getRandomNum();
+        float radius=powf(getRandomNum(),1.0/3);
 
-    Vector3d random_ball;
-    random_ball << radius*sin(theta1)*cos(theta2),
-                   radius*sin(theta1)*sin(theta2),
-                   radius*cos(theta1);
+        Vector3d random_ball;
+        random_ball << radius*sin(theta1)*cos(theta2),
+                    radius*sin(theta1)*sin(theta2),
+                    radius*cos(theta1);
 
-    Vector3d random_ellipsoid=C*L*random_ball;
+        Vector3d random_ellipsoid=C*L*random_ball;
 
-    Vector3d center= (node_origin_->position_+node_target_->position_)*0.5;
-    Vector3d point=random_ellipsoid+center;
+        Vector3d center= (node_origin_->position_+node_target_->position_)*0.5;
+        point=random_ellipsoid+center;
+        if((point - node_origin_->position_).norm() > 1.0)
+            disFlag=true;
+    }
     return point;
 }
 
@@ -383,8 +389,8 @@ Vector2d PFRRTStar::sample()
     {
         case Global:
         {
-            // if(!path_.nodes_.empty()) point_sample=project2plane(sampleInEllipsoid());
-            // else
+            if(!path_.nodes_.empty()) point_sample=project2plane(sampleInEllipsoid());
+            else
                 point_sample=(getRandomNum() < goal_biased_ )?project2plane(node_target_->position_):getRandom2DPoint();
         }
         break;
