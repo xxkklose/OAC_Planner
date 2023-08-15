@@ -2234,23 +2234,23 @@ void savePointCloud(const ros::Publisher &pubLivoxTotalPoint){
 
     // TODO： 尝试增加增采样
 
-    pcl::MovingLeastSquares<pcl::PointXYZ,pcl::PointNormal> mls;
+    // pcl::MovingLeastSquares<pcl::PointXYZ,pcl::PointNormal> mls;
  
-    //Step5：设置是否使用多项式拟合提高精度
-    mls.setPolynomialFit(true);
+    // //Step5：设置是否使用多项式拟合提高精度
+    // mls.setPolynomialFit(true);
  
-    //Step6: 使用MLS进行平顺
-    mls.setInputCloud(pclnoi_wait_save);
-    mls.setPolynomialOrder(2);  //设置多项式的最高阶数为2阶？
-    mls.setSearchMethod(tree);  
-    mls.setSearchRadius(0.03);  //设置在进行Kdtree中K邻域，的查找半径
+    // //Step6: 使用MLS进行平顺
+    // mls.setInputCloud(pclnoi_wait_save);
+    // mls.setPolynomialOrder(2);  //设置多项式的最高阶数为2阶？
+    // mls.setSearchMethod(tree);  
+    // mls.setSearchRadius(0.03);  //设置在进行Kdtree中K邻域，的查找半径
  
-    mls.process(filtered_cloud_MovingLeastSquared);
+    // mls.process(filtered_cloud_MovingLeastSquared);
 
 
     sensor_msgs::PointCloud2 cloud_msg;
     // 将pcl::PointCloud<pcl::PointXYZ>转换为sensor_msgs::PointCloud2
-    pcl::toROSMsg(filtered_cloud_MovingLeastSquared, cloud_msg);
+    pcl::toROSMsg(*pclnoi_wait_save, cloud_msg);
     // pcl::toROSMsg(*pcl_wait_save, cloud_msg);
     // 填充PointCloud2消息的头部信息（frame_id、timestamp等）
     cloud_msg.header.frame_id = "camera_init"; // 设置坐标系

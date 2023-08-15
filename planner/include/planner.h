@@ -106,7 +106,7 @@ protected:
     double goal_threshold_=0.5;
     double sub_goal_threshold_=0.5;
 
-    double inherit_threshold_=1.25;
+    double inherit_threshold_=0.25;
 
     //step size used when generating new nodes
     double step_size_=1.0;
