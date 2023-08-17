@@ -1856,7 +1856,6 @@ bool savePoseService(fast_lio_sam::save_poseRequest& req, fast_lio_sam::save_pos
 */
 bool saveMapService(fast_lio_sam::save_mapRequest& req, fast_lio_sam::save_mapResponse& res)
 {
-     //TODO: 尝试保存地图
       string saveMapDirectory;
     
       cout << "****************************************************" << endl;
@@ -2139,7 +2138,7 @@ void savePointCloud(const ros::Publisher &pubLivoxTotalPoint){
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud_passThroughed(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud_statisticalOutlierRemovaled(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointNormal> filtered_cloud_MovingLeastSquared;
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+    // pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
     PointCloudXYZI::Ptr ikdmap(new PointCloudXYZI());
 
     tf::TransformListener listener;
@@ -2231,8 +2230,6 @@ void savePointCloud(const ros::Publisher &pubLivoxTotalPoint){
             pclnoi_wait_save->push_back(pi);
         }
     }
-
-    // TODO： 尝试增加增采样
 
     // pcl::MovingLeastSquares<pcl::PointXYZ,pcl::PointNormal> mls;
  

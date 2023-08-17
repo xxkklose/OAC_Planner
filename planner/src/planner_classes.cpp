@@ -165,17 +165,22 @@ void World::clearMap()
 
 void World::initGridMap(const Vector3d &lowerbound,const Vector3d &upperbound)
 {
+    clearMap();
     lowerbound_=lowerbound;
     upperbound_=upperbound;
     idx_count_=((upperbound_-lowerbound_)/resolution_).cast<int>()+Eigen::Vector3i::Ones();
     grid_map_=new bool**[idx_count_(0)];
-    for(int i=0;i < idx_count_(0);i++)
+    grid_map_count_=new int**[idx_count_(0)];
+    for(int i = 0 ; i < idx_count_(0) ; i++)
     {
         grid_map_[i]=new bool*[idx_count_(1)];
-        for(int j=0;j < idx_count_(1);j++)
+        grid_map_count_[i]=new int*[idx_count_(1)];
+        for(int j = 0 ; j < idx_count_(1) ; j++)
         {
             grid_map_[i][j]=new bool[idx_count_(2)];
+            grid_map_count_[i][j]=new int[idx_count_(2)];
             memset(grid_map_[i][j],true,idx_count_(2)*sizeof(bool));
+            memset(grid_map_count_[i][j],0,idx_count_(2)*sizeof(int));
         }
     }
     has_map_=true;

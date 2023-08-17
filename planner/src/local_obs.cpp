@@ -49,7 +49,6 @@ void rcvlivoxCallBack(const sensor_msgs::PointCloud2& livox_points)
   passthrough.setFilterLimits(local_z_l, local_z_u);
   passthrough.filter(*cloud_after_PassThrough);
 
-  // ROS_WARN("cloud_after_PassThrough->points.size(): %d", cloud_after_PassThrough->points.size());
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filt(new pcl::PointCloud<pcl::PointXYZ>);
   Vector3d lowerbound(local_x_l, local_y_l, local_z_l);
   Vector3d upperbound(local_x_u, local_y_u, local_z_u);
@@ -70,7 +69,6 @@ void rcvlivoxCallBack(const sensor_msgs::PointCloud2& livox_points)
       cloud_filt->points.push_back(pt_add);
     }
   }
-  // ROS_WARN("cloud_filt->points.size(): %d", cloud_filt->points.size());
 
   listener_ptr->waitForTransform("camera_init", "body", ros::Time(0), ros::Duration(2.0));
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_tran(new pcl::PointCloud<pcl::PointXYZ>);
@@ -106,9 +104,11 @@ void rcvlivoxCallBack(const sensor_msgs::PointCloud2& livox_points)
   }
 
   sensor_msgs::PointCloud2 obs_vis;
-  pcl::toROSMsg(*cloud_tran, obs_vis);
+  pcl::toROSMsg(*cloud, obs_vis);
+  // pcl::toROSMsg(*cloud_tran, obs_vis);
 
   obs_vis.header.frame_id = "camera_init";
+  obs_vis.header.stamp = ros::Time::now();
   obs_pub.publish(obs_vis);
   obs_array_pub.publish(obs_array);
 }
