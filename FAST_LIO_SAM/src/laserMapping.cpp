@@ -2272,91 +2272,91 @@ int main(int argc, char **argv)
     {
         transformTobeMapped[i] = 0;
     }
-
+    #pragma region 参数初始化
     ros::init(argc, argv, "laserMapping");
     ros::NodeHandle nh;
 
-    nh.param<bool>("publish/path_en", path_en, true);
-    nh.param<bool>("publish/scan_publish_en", scan_pub_en, true);
-    nh.param<bool>("publish/dense_publish_en", dense_pub_en, true);
-    nh.param<bool>("publish/scan_bodyframe_pub_en", scan_body_pub_en, true);
-    nh.param<int>("max_iteration", NUM_MAX_ITERATIONS, 4);
-    nh.param<string>("map_file_path", map_file_path, "");
-    nh.param<string>("common/lid_topic", lid_topic, "/livox/lidar");
-    nh.param<string>("common/imu_topic", imu_topic, "/livox/imu");
-    nh.param<bool>("common/time_sync_en", time_sync_en, false);
-    nh.param<double>("filter_size_corner", filter_size_corner_min, 0.5);
-    nh.param<double>("filter_size_surf", filter_size_surf_min, 0.5);
-    nh.param<double>("filter_size_map", filter_size_map_min, 0.5);
-    nh.param<double>("cube_side_length", cube_len, 200);
-    nh.param<float>("mapping/det_range", DET_RANGE, 300.f);
-    nh.param<double>("mapping/fov_degree", fov_deg, 180);
-    nh.param<double>("mapping/gyr_cov", gyr_cov, 0.1);
-    nh.param<double>("mapping/acc_cov", acc_cov, 0.1);
-    nh.param<double>("mapping/b_gyr_cov", b_gyr_cov, 0.0001);
-    nh.param<double>("mapping/b_acc_cov", b_acc_cov, 0.0001);
-    nh.param<double>("preprocess/blind", p_pre->blind, 0.01);
-    nh.param<int>("preprocess/lidar_type", p_pre->lidar_type, AVIA);
-    nh.param<int>("preprocess/scan_line", p_pre->N_SCANS, 16);
-    nh.param<int>("preprocess/scan_rate", p_pre->SCAN_RATE, 10);
-    nh.param<int>("point_filter_num", p_pre->point_filter_num, 2);
-    nh.param<bool>("feature_extract_enable", p_pre->feature_enabled, false);
-    nh.param<bool>("runtime_pos_log_enable", runtime_pos_log, 0);
-    nh.param<bool>("mapping/extrinsic_est_en", extrinsic_est_en, true);
-    nh.param<bool>("pcd_save/pcd_save_en", pcd_save_en, false);
-    nh.param<int>("pcd_save/interval", pcd_save_interval, -1);
-    nh.param<vector<double>>("mapping/extrinsic_T", extrinT, vector<double>());
-    nh.param<vector<double>>("mapping/extrinsic_R", extrinR, vector<double>());
+    nh.param<bool>("publish/path_en", path_en, true);  // 是否发布轨迹
+    nh.param<bool>("publish/scan_publish_en", scan_pub_en, true); // 是否发布scan
+    nh.param<bool>("publish/dense_publish_en", dense_pub_en, true); // 是否发布稠密点云
+    nh.param<bool>("publish/scan_bodyframe_pub_en", scan_body_pub_en, true); // 是否发布scan_bodyframe
+    nh.param<int>("max_iteration", NUM_MAX_ITERATIONS, 4); // 最大迭代次数
+    nh.param<string>("map_file_path", map_file_path, ""); // 保存地图路径
+    nh.param<string>("common/lid_topic", lid_topic, "/livox/lidar"); // 激光雷达话题
+    nh.param<string>("common/imu_topic", imu_topic, "/livox/imu"); // imu话题
+    nh.param<bool>("common/time_sync_en", time_sync_en, false); // 是否时间同步
+    nh.param<double>("filter_size_corner", filter_size_corner_min, 0.5); //  coner点云滤波大小
+    nh.param<double>("filter_size_surf", filter_size_surf_min, 0.5); //  surf点云滤波大小
+    nh.param<double>("filter_size_map", filter_size_map_min, 0.5); //  地图点云滤波大小
+    nh.param<double>("cube_side_length", cube_len, 200); //
+    nh.param<float>("mapping/det_range", DET_RANGE, 300.f); //  检测范围
+    nh.param<double>("mapping/fov_degree", fov_deg, 180); //  视场角
+    nh.param<double>("mapping/gyr_cov", gyr_cov, 0.1); //  角速度噪声
+    nh.param<double>("mapping/acc_cov", acc_cov, 0.1); //   加速度噪声
+    nh.param<double>("mapping/b_gyr_cov", b_gyr_cov, 0.0001); //  角速度bias噪声
+    nh.param<double>("mapping/b_acc_cov", b_acc_cov, 0.0001); // 加速度bias噪声
+    nh.param<double>("preprocess/blind", p_pre->blind, 0.01); //  盲区
+    nh.param<int>("preprocess/lidar_type", p_pre->lidar_type, AVIA); // 激光雷达类型
+    nh.param<int>("preprocess/scan_line", p_pre->N_SCANS, 16); // 激光雷达线数
+    nh.param<int>("preprocess/scan_rate", p_pre->SCAN_RATE, 10); // 激光雷达频率
+    nh.param<int>("point_filter_num", p_pre->point_filter_num, 2); // 滤波次数
+    nh.param<bool>("feature_extract_enable", p_pre->feature_enabled, false); // 是否提取特征
+    nh.param<bool>("runtime_pos_log_enable", runtime_pos_log, 0); // 是否记录位置
+    nh.param<bool>("mapping/extrinsic_est_en", extrinsic_est_en, true); // 是否估计外参
+    nh.param<bool>("pcd_save/pcd_save_en", pcd_save_en, false); // 是否保存pcd
+    nh.param<int>("pcd_save/interval", pcd_save_interval, -1); // 保存pcd间隔
+    nh.param<vector<double>>("mapping/extrinsic_T", extrinT, vector<double>()); // 外参平移
+    nh.param<vector<double>>("mapping/extrinsic_R", extrinR, vector<double>()); //  外参旋转
     cout << "p_pre->lidar_type " << p_pre->lidar_type << endl;
 
-    nh.param<float>("odometrySurfLeafSize", odometrySurfLeafSize, 0.2);
-    nh.param<float>("mappingCornerLeafSize", mappingCornerLeafSize, 0.2);
-    nh.param<float>("mappingSurfLeafSize", mappingSurfLeafSize, 0.2);
-    nh.param<float>("z_tollerance", z_tollerance, FLT_MAX);
-    nh.param<float>("rotation_tollerance", rotation_tollerance, FLT_MAX);
+    nh.param<float>("odometrySurfLeafSize", odometrySurfLeafSize, 0.2); //  里程计surf点云滤波大小
+    nh.param<float>("mappingCornerLeafSize", mappingCornerLeafSize, 0.2);// 建图 corner点云滤波大小
+    nh.param<float>("mappingSurfLeafSize", mappingSurfLeafSize, 0.2); // 建图 surf点云滤波大小
+    nh.param<float>("z_tollerance", z_tollerance, FLT_MAX); // z轴容差
+    nh.param<float>("rotation_tollerance", rotation_tollerance, FLT_MAX);// 旋转容差
 
-    nh.param<int>("numberOfCores", numberOfCores, 2);
-    nh.param<double>("mappingProcessInterval", mappingProcessInterval, 0.15);
+    nh.param<int>("numberOfCores", numberOfCores, 2); //  线程数
+    nh.param<double>("mappingProcessInterval", mappingProcessInterval, 0.15); //  建图间隔
 
     // save keyframes
-    nh.param<float>("surroundingkeyframeAddingDistThreshold", surroundingkeyframeAddingDistThreshold, 20.0);
-    nh.param<float>("surroundingkeyframeAddingAngleThreshold", surroundingkeyframeAddingAngleThreshold, 0.2);
-    nh.param<float>("surroundingKeyframeDensity", surroundingKeyframeDensity, 1.0);
-    nh.param<float>("surroundingKeyframeSearchRadius", surroundingKeyframeSearchRadius, 50.0);
+    nh.param<float>("surroundingkeyframeAddingDistThreshold", surroundingkeyframeAddingDistThreshold, 20.0); //  添加关键帧距离阈值
+    nh.param<float>("surroundingkeyframeAddingAngleThreshold", surroundingkeyframeAddingAngleThreshold, 0.2); // 添加关键帧角度阈值
+    nh.param<float>("surroundingKeyframeDensity", surroundingKeyframeDensity, 1.0); // 关键帧密度
+    nh.param<float>("surroundingKeyframeSearchRadius", surroundingKeyframeSearchRadius, 50.0); //   关键帧搜索半径
 
     // loop clousre
-    nh.param<bool>("loopClosureEnableFlag", loopClosureEnableFlag, false);
-    nh.param<float>("loopClosureFrequency", loopClosureFrequency, 1.0);
-    nh.param<int>("surroundingKeyframeSize", surroundingKeyframeSize, 50);
-    nh.param<float>("historyKeyframeSearchRadius", historyKeyframeSearchRadius, 10.0);
-    nh.param<float>("historyKeyframeSearchTimeDiff", historyKeyframeSearchTimeDiff, 30.0);
-    nh.param<int>("historyKeyframeSearchNum", historyKeyframeSearchNum, 25);
-    nh.param<float>("historyKeyframeFitnessScore", historyKeyframeFitnessScore, 0.3);
+    nh.param<bool>("loopClosureEnableFlag", loopClosureEnableFlag, false); // 闭环检测标志
+    nh.param<float>("loopClosureFrequency", loopClosureFrequency, 1.0); // 闭环检测频率
+    nh.param<int>("surroundingKeyframeSize", surroundingKeyframeSize, 50); // 关键帧数量
+    nh.param<float>("historyKeyframeSearchRadius", historyKeyframeSearchRadius, 10.0); // 历史关键帧搜索半径
+    nh.param<float>("historyKeyframeSearchTimeDiff", historyKeyframeSearchTimeDiff, 30.0); // 历史关键帧时间差
+    nh.param<int>("historyKeyframeSearchNum", historyKeyframeSearchNum, 25); // 历史关键帧数量
+    nh.param<float>("historyKeyframeFitnessScore", historyKeyframeFitnessScore, 0.3); // 历史关键帧分数
 
     // gnss
-    nh.param<string>("common/gnss_topic", gnss_topic,"/gps/fix");
-    nh.param<vector<double>>("mapping/extrinR_Gnss2Lidar", extrinR_Gnss2Lidar, vector<double>());
-    nh.param<vector<double>>("mapping/extrinT_Gnss2Lidar", extrinT_Gnss2Lidar, vector<double>());
-    nh.param<bool>("useImuHeadingInitialization", useImuHeadingInitialization, false);
-    nh.param<bool>("useGpsElevation", useGpsElevation, false);
-    nh.param<float>("gpsCovThreshold", gpsCovThreshold, 2.0);
-    nh.param<float>("poseCovThreshold", poseCovThreshold, 25.0);
+    nh.param<string>("common/gnss_topic", gnss_topic,"/gps/fix"); // gnss话题
+    nh.param<vector<double>>("mapping/extrinR_Gnss2Lidar", extrinR_Gnss2Lidar, vector<double>()); // gnss外参旋转
+    nh.param<vector<double>>("mapping/extrinT_Gnss2Lidar", extrinT_Gnss2Lidar, vector<double>()); // gnss外参平移
+    nh.param<bool>("useImuHeadingInitialization", useImuHeadingInitialization, false); // 是否使用imu初始化
+    nh.param<bool>("useGpsElevation", useGpsElevation, false); // 是否使用gps高度
+    nh.param<float>("gpsCovThreshold", gpsCovThreshold, 2.0); // gps协方差阈值
+    nh.param<float>("poseCovThreshold", poseCovThreshold, 25.0); // 位姿协方差阈值
 
 
     // Visualization
-    nh.param<float>("globalMapVisualizationSearchRadius", globalMapVisualizationSearchRadius, 1e3);
-    nh.param<float>("globalMapVisualizationPoseDensity", globalMapVisualizationPoseDensity, 10.0);
-    nh.param<float>("globalMapVisualizationLeafSize", globalMapVisualizationLeafSize, 1.0);
+    nh.param<float>("globalMapVisualizationSearchRadius", globalMapVisualizationSearchRadius, 1e3); // 全局地图可视化搜索半径
+    nh.param<float>("globalMapVisualizationPoseDensity", globalMapVisualizationPoseDensity, 10.0); // 全局地图可视化位姿密度
+    nh.param<float>("globalMapVisualizationLeafSize", globalMapVisualizationLeafSize, 1.0);// 全局地图可视化滤波大小
 
     // visual ikdtree map
-    nh.param<bool>("visulize_IkdtreeMap", visulize_IkdtreeMap, false);
+    nh.param<bool>("visulize_IkdtreeMap", visulize_IkdtreeMap, false); // 是否可视化ikdtree
 
     // reconstruct ikdtree 
-    nh.param<bool>("recontructKdTree", recontructKdTree, false);
+    nh.param<bool>("recontructKdTree", recontructKdTree, false); // 是否重建ikdtree
 
     // savMap
-    nh.param<bool>("savePCD", savePCD, false);
-    nh.param<std::string>("savePCDDirectory", savePCDDirectory, "/Downloads/LOAM/");
+    nh.param<bool>("savePCD", savePCD, false); // 是否保存pcd
+    nh.param<std::string>("savePCDDirectory", savePCDDirectory, "/Downloads/LOAM/"); // 保存pcd路径
 
     downSizeFilterCorner.setLeafSize(mappingCornerLeafSize, mappingCornerLeafSize, mappingCornerLeafSize);
     // downSizeFilterSurf.setLeafSize(mappingSurfLeafSize, mappingSurfLeafSize, mappingSurfLeafSize);
@@ -2386,8 +2386,6 @@ int main(int argc, char **argv)
     memset(res_last, -1000.0f, sizeof(res_last));
     downSizeFilterSurf.setLeafSize(filter_size_surf_min, filter_size_surf_min, filter_size_surf_min);
     downSizeFilterMap.setLeafSize(filter_size_map_min, filter_size_map_min, filter_size_map_min);
-    memset(point_selected_surf, true, sizeof(point_selected_surf)); //重复？
-    memset(res_last, -1000.0f, sizeof(res_last));
 
     //设置imu和lidar外参和imu参数等
     Lidar_T_wrt_IMU << VEC_FROM_ARRAY(extrinT);
@@ -2406,7 +2404,9 @@ int main(int argc, char **argv)
     fill(epsi, epsi + 23, 0.001);
     ///初始化，其中h_share_model定义了·平面搜索和残差计算
     kf.init_dyn_share(get_f, df_dx, df_dw, h_share_model, NUM_MAX_ITERATIONS, epsi);
+    #pragma endregion 
 
+    #pragma region debug record
     /*** debug record ***/
     FILE *fp;
     string pos_log_dir = root_dir + "/Log/pos_log.txt";
@@ -2420,7 +2420,9 @@ int main(int argc, char **argv)
         cout << "~~~~" << ROOT_DIR << " file opened" << endl;
     else
         cout << "~~~~" << ROOT_DIR << " doesn't exist" << endl;
-
+    #pragma endregion
+    
+    #pragma region 话题初始化
     /*** ROS subscribe initialization ***/
     ros::Subscriber sub_pcl = p_pre->lidar_type == AVIA ? nh.subscribe(lid_topic, 200000, livox_pcl_cbk) : nh.subscribe(lid_topic, 200000, standard_pcl_cbk);
     ros::Subscriber sub_imu = nh.subscribe(imu_topic, 200000, imu_cbk);
@@ -2453,12 +2455,13 @@ int main(int argc, char **argv)
 
     // savePose  发布轨迹保存服务
     srvSavePose  = nh.advertiseService("/save_pose" ,  &savePoseService);
+    #pragma endregion
 
     // 回环检测线程
     std::thread loopthread(&loopClosureThread);
     std::thread thread_pubTotalPoint(&pubTotalPoint, pubLivoxTotalPoint);
 
-    //------------------------------------------------------------------------------------------------------
+    #pragma region 主循环
     signal(SIGINT, SigHandle);
     ros::Rate rate(5000);
     bool status = ros::ok();
@@ -2652,7 +2655,9 @@ int main(int argc, char **argv)
         status = ros::ok();
         rate.sleep();
     }
+    #pragma endregion
 
+    #pragma region 保存地图 保存的是*pcl_wait_save
     /**************** save map ****************/
     /* 1. make sure you have enough memories
     /* 2. pcd save will largely influence the real-time performences **/

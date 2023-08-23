@@ -5,6 +5,7 @@
 #include <nav_msgs/Path.h>
 #include <std_msgs/Float32MultiArray.h>
 #include <fstream>
+#include <thread>
 
 using namespace std;
 using namespace std_msgs;
@@ -51,6 +52,8 @@ Vector3d target_pt;
 World* world = NULL;
 Minimum_jerk mj = Minimum_jerk();
 PFRRTStar* pf_rrt_star = NULL;
+
+//single thread for pose pub
 
 // function declaration
 void rcvWaypointsCallback(const nav_msgs::Path& wp);
@@ -164,7 +167,6 @@ void findSolution()
     for(const auto &node : solution.nodes_){
       mj.waypoints.push_back(node->position_);
     }
-    // ROS_WARN("1");
     mj.waypoints.push_back(start_pt);
     Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
     mj.getTimeVector(mj.waypoints,0.4,0.2); //TODO:max_vel, max_acc
@@ -267,6 +269,45 @@ void callPlanner()
     ROS_INFO("The tree is large enough.Stop expansion!Current size: %d", (int)(pf_rrt_star->tree().size()));
 }
 
+void pubRobotPose(const ros::Publisher& pose_pub_to_control){
+  tf::StampedTransform transform;
+  geometry_msgs::PoseStamped pose_msg;
+  tf::TransformListener listener;
+
+
+  while (ros::ok())
+  { 
+    // Update the position of the origin
+    while (true && ros::ok())
+    {
+      try
+      {
+        listener.lookupTransform("camera_init", "body", ros::Time(0), transform);  //查询变换
+        break;
+      }
+      catch (tf::TransformException& ex)
+      {
+        continue;
+      }
+    }
+    //set message robot_pose 
+    pose_msg.header.stamp = ros::Time::now();
+    pose_msg.header.frame_id = "camera_init";
+    // pose_msg.pose.position.x = transform.getOrigin().x() - 0.17193;
+    pose_msg.pose.position.x = transform.getOrigin().x();
+    pose_msg.pose.position.y = transform.getOrigin().y();
+    // pose_msg.pose.position.z = transform.getOrigin().z() - 0.13942;
+    pose_msg.pose.position.z = transform.getOrigin().z();
+    pose_msg.pose.orientation.w = transform.getRotation().getW();
+    pose_msg.pose.orientation.x = transform.getRotation().getX();
+    pose_msg.pose.orientation.y = transform.getRotation().getY();
+    pose_msg.pose.orientation.z = transform.getRotation().getZ();
+
+    pose_pub_to_control.publish(pose_msg);
+  }
+  
+}
+
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "global_planning_node");
@@ -322,15 +363,15 @@ int main(int argc, char** argv)
 
   mj.traj_jerk_vis_pub_ = &traj_jerk_vis_pub;
   
-  tf::TransformListener listener;
+  std::thread thread_pubTotalPoint(&pubRobotPose, pose_pub_to_control);
+
 
   while (ros::ok())
   {
     timeval start;
     gettimeofday(&start, NULL);
-
-    // Update the position of the origin
     tf::StampedTransform transform;
+    tf::TransformListener listener;
 
     while (true && ros::ok())
     {
@@ -346,19 +387,6 @@ int main(int argc, char** argv)
     }
     start_pt << transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z();
    
-    //set message robot_pose 
-    geometry_msgs::PoseStamped pose_msg;
-    pose_msg.header.stamp = ros::Time::now();
-    pose_msg.header.frame_id = "camera_init";
-    // pose_msg.pose.position.x = transform.getOrigin().x() - 0.17193;
-    pose_msg.pose.position.x = transform.getOrigin().x();
-    pose_msg.pose.position.y = transform.getOrigin().y();
-    // pose_msg.pose.position.z = transform.getOrigin().z() - 0.13942;
-    pose_msg.pose.position.z = transform.getOrigin().z();
-    pose_msg.pose.orientation.w = transform.getRotation().getW();
-    pose_msg.pose.orientation.x = transform.getRotation().getX();
-    pose_msg.pose.orientation.y = transform.getRotation().getY();
-    pose_msg.pose.orientation.z = transform.getRotation().getZ();
     //save vel_direction to minimum_jerk
     Eigen::Vector3d unit_vector = {1.0, 0.0, 0.0};
     Eigen::Quaterniond tmp_quaternion(transform.getRotation().getW(),
@@ -373,7 +401,6 @@ int main(int argc, char** argv)
     mj.start_acc = rotationMatrix * (0.01*unit_vector);
     // mj.start_vel = rotationMatrix * unit_vector;
     // mj.start_acc = rotationMatrix * unit_vector;
-    pose_pub_to_control.publish(pose_msg);
 
     // Execute the callback functions to update the grid map and check if there's a new goal
     ros::spinOnce();
@@ -387,5 +414,7 @@ int main(int argc, char** argv)
       ms = 1000 * (end.tv_sec - start.tv_sec) + 0.001 * (end.tv_usec - start.tv_usec);
     } while (ms < 100);  // Cycle in 100ms
   }
+  thread_pubTotalPoint.join();
+
   return 0;
 }

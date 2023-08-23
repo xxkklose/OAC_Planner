@@ -4,7 +4,7 @@
 #define RETURN0AND1 0x10
 
 Preprocess::Preprocess()
-  :feature_enabled(0), lidar_type(AVIA), blind(0.01), point_filter_num(1)
+  :feature_enabled(1), lidar_type(AVIA), blind(0.01), point_filter_num(1)
 {
   inf_bound = 10;
   N_SCANS   = 6;
