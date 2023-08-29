@@ -363,7 +363,7 @@ int main(int argc, char** argv)
 
   mj.traj_jerk_vis_pub_ = &traj_jerk_vis_pub;
   
-  std::thread thread_pubTotalPoint(&pubRobotPose, pose_pub_to_control);
+  // std::thread thread_pubTotalPoint(&pubRobotPose, pose_pub_to_control);
 
 
   while (ros::ok())
@@ -414,7 +414,7 @@ int main(int argc, char** argv)
       ms = 1000 * (end.tv_sec - start.tv_sec) + 0.001 * (end.tv_usec - start.tv_usec);
     } while (ms < 100);  // Cycle in 100ms
   }
-  thread_pubTotalPoint.join();
+  // thread_pubTotalPoint.join();
 
   return 0;
 }

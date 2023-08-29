@@ -1715,11 +1715,13 @@ void publish_odometry(const ros::Publisher &pubOdomAftMapped)
     br.sendTransform(tf::StampedTransform(transform, odomAftMapped.header.stamp, "camera_init", "body"));
 }
 
-void publish_path(const ros::Publisher pubPath)
+void publish_path(const ros::Publisher pubPath, const ros::Publisher pubRobotPose)
 {
     set_posestamp(msg_body_pose);
     msg_body_pose.header.stamp = ros::Time().fromSec(lidar_end_time);
     msg_body_pose.header.frame_id = "camera_init";
+
+    pubRobotPose.publish(msg_body_pose);
 
     /*** if path is too large, the rvis will crash ***/
     static int jjj = 0;
@@ -2433,7 +2435,7 @@ int main(int argc, char **argv)
     ros::Publisher pubOdomAftMapped = nh.advertise<nav_msgs::Odometry>("/Odometry", 100000);
     ros::Publisher pubPath = nh.advertise<nav_msgs::Path>("/path", 1e00000);
     ros::Publisher pubLivoxTotalPoint = nh.advertise<sensor_msgs::PointCloud2>("/livox_total_point", 10);
-
+    ros::Publisher pubRobotPose = nh.advertise<geometry_msgs::PoseStamped>("global_planning_node/robot_pose", 40);
     ros::Publisher pubPathUpdate = nh.advertise<nav_msgs::Path>("fast_lio_sam/path_update", 100000);                   //  isam更新后的path
     pubGnssPath = nh.advertise<nav_msgs::Path>("/gnss_path", 100000);
     pubLaserCloudSurround = nh.advertise<sensor_msgs::PointCloud2>("fast_lio_sam/mapping/keyframe_submap", 1); // 发布局部关键帧map的特征点云
@@ -2600,7 +2602,7 @@ int main(int argc, char **argv)
             t5 = omp_get_wtime();
             /******* Publish points *******/
             if (path_en){
-                publish_path(pubPath);
+                publish_path(pubPath,pubRobotPose);
                 publish_gnss_path(pubGnssPath);                        //   发布gnss轨迹
                 publish_path_update(pubPathUpdate);             //   发布经过isam2优化后的路径
                 static int jjj = 0;
