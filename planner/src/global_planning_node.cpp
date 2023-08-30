@@ -21,7 +21,7 @@ backward::SignalHandling sh;
 std::ofstream outputFile;
 
 // ros related
-ros::Subscriber map_sub, wp_sub;
+ros::Subscriber map_sub, wp_sub, pose_sub;
 
 ros::Publisher grid_map_vis_pub;
 ros::Publisher path_vis_pub;
@@ -32,6 +32,7 @@ ros::Publisher path_interpolation_pub;
 ros::Publisher tree_tra_pub;
 ros::Publisher pose_pub_to_control;
 ros::Publisher traj_jerk_vis_pub;
+ros::Publisher pose_pub;
 
 // indicate whether the robot has a moving goal
 bool has_goal = false;
@@ -79,8 +80,16 @@ void rcvWaypointsCallback(const nav_msgs::Path& wp)
  */
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2& pointcloud_map)
 {
+  std::cout << "receive point cloud: " << pointcloud_map.data.size() << std::endl;
+  pcl::PointCloud<pcl::PointXYZ> cloud_in;
   pcl::PointCloud<pcl::PointXYZ> cloud;
-  pcl::fromROSMsg(pointcloud_map, cloud);
+  pcl::fromROSMsg(pointcloud_map, cloud_in);
+
+  for(const auto &pt : cloud_in){
+    if(pt.z > -999999999 && pt.z < start_pt.z() + 2.0){
+      cloud.push_back(pt);
+    }
+  }
 
   world->initGridMap(cloud);
 
@@ -98,6 +107,34 @@ void rcvPointCloudCallBack(const sensor_msgs::PointCloud2& pointcloud_map)
     world->addObs(obstacle);
   }
   visWorld(world, &grid_map_vis_pub);
+}
+
+void rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
+{
+  start_pt << pose.pose.position.x, pose.pose.position.y, pose.pose.position.z;
+
+  // save vel_direction to minimum_jerk
+  Eigen::Vector3d unit_vector = {1.0, 0.0, 0.0};
+  Eigen::Quaterniond tmp_quaternion(pose.pose.orientation.w, 
+                                    pose.pose.orientation.x, 
+                                    pose.pose.orientation.y, 
+                                    pose.pose.orientation.z);
+  
+  // 将四元数转换为旋转矩阵
+  Eigen::Matrix3d rotationMatrix = tmp_quaternion.toRotationMatrix();
+  // 转换到camera_init坐标系下
+  mj.start_vel = rotationMatrix * (0.01*unit_vector);
+  mj.start_acc = rotationMatrix * (0.01*unit_vector);
+  mj.start_vel = rotationMatrix * unit_vector;
+  mj.start_acc = rotationMatrix * unit_vector;
+
+  geometry_msgs::PoseStamped pose_to_control;
+  pose_to_control.header.frame_id = "camera_init";
+  pose_to_control.header.stamp = ros::Time::now();
+  pose_to_control.pose = pose.pose;
+  pose_pub.publish(pose_to_control);
+
+  return;
 }
 
 /**
@@ -171,8 +208,7 @@ void findSolution()
     Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
     mj.getTimeVector(mj.waypoints,0.4,0.2); //TODO:max_vel, max_acc
     mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
-    // // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix); //暂时先用零向量代替
-
+    // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix); //暂时先用零向量代替
 
     visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
@@ -199,7 +235,7 @@ void findSolution()
     Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
     mj.getTimeVector(mj.waypoints,0.4,0.2); //TODO:max_vel, max_acc
     mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
-    // // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix);
+    // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix);
 
     visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
@@ -269,45 +305,6 @@ void callPlanner()
     ROS_INFO("The tree is large enough.Stop expansion!Current size: %d", (int)(pf_rrt_star->tree().size()));
 }
 
-void pubRobotPose(const ros::Publisher& pose_pub_to_control){
-  tf::StampedTransform transform;
-  geometry_msgs::PoseStamped pose_msg;
-  tf::TransformListener listener;
-
-
-  while (ros::ok())
-  { 
-    // Update the position of the origin
-    while (true && ros::ok())
-    {
-      try
-      {
-        listener.lookupTransform("camera_init", "body", ros::Time(0), transform);  //查询变换
-        break;
-      }
-      catch (tf::TransformException& ex)
-      {
-        continue;
-      }
-    }
-    //set message robot_pose 
-    pose_msg.header.stamp = ros::Time::now();
-    pose_msg.header.frame_id = "camera_init";
-    // pose_msg.pose.position.x = transform.getOrigin().x() - 0.17193;
-    pose_msg.pose.position.x = transform.getOrigin().x();
-    pose_msg.pose.position.y = transform.getOrigin().y();
-    // pose_msg.pose.position.z = transform.getOrigin().z() - 0.13942;
-    pose_msg.pose.position.z = transform.getOrigin().z();
-    pose_msg.pose.orientation.w = transform.getRotation().getW();
-    pose_msg.pose.orientation.x = transform.getRotation().getX();
-    pose_msg.pose.orientation.y = transform.getRotation().getY();
-    pose_msg.pose.orientation.z = transform.getRotation().getZ();
-
-    pose_pub_to_control.publish(pose_msg);
-  }
-  
-}
-
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "global_planning_node");
@@ -315,6 +312,7 @@ int main(int argc, char** argv)
 
   map_sub = nh.subscribe("map", 1, rcvPointCloudCallBack);
   wp_sub = nh.subscribe("waypoints", 1, rcvWaypointsCallback);
+  pose_sub = nh.subscribe("/global_planning_node/robot_pose", 1, rcvPoseCallback);
 
   grid_map_vis_pub = nh.advertise<sensor_msgs::PointCloud2>("grid_map_vis", 1);
   path_vis_pub = nh.advertise<visualization_msgs::Marker>("path_vis", 40);
@@ -323,7 +321,7 @@ int main(int argc, char** argv)
   tree_vis_pub = nh.advertise<visualization_msgs::Marker>("tree_vis", 40);
   tree_tra_pub = nh.advertise<std_msgs::Float32MultiArray>("tree_tra", 40);
   path_interpolation_pub = nh.advertise<std_msgs::Float32MultiArray>("global_path", 1000);
-  pose_pub_to_control = nh.advertise<geometry_msgs::PoseStamped>("robot_pose", 40);
+  pose_pub = nh.advertise<geometry_msgs::PoseStamped>("robotPose", 40);
   traj_jerk_vis_pub = nh.advertise<nav_msgs::Path>("trajectory_path", 40);
 
   nh.param("map/resolution", resolution, 0.1);
@@ -363,9 +361,6 @@ int main(int argc, char** argv)
 
   mj.traj_jerk_vis_pub_ = &traj_jerk_vis_pub;
   
-  // std::thread thread_pubTotalPoint(&pubRobotPose, pose_pub_to_control);
-
-
   while (ros::ok())
   {
     timeval start;
@@ -373,34 +368,19 @@ int main(int argc, char** argv)
     tf::StampedTransform transform;
     tf::TransformListener listener;
 
-    while (true && ros::ok())
-    {
-      try
-      {
-        listener.lookupTransform("camera_init", "body", ros::Time(0), transform);  //查询变换
-        break;
-      }
-      catch (tf::TransformException& ex)
-      {
-        continue;
-      }
-    }
-    start_pt << transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z();
-   
-    //save vel_direction to minimum_jerk
-    Eigen::Vector3d unit_vector = {1.0, 0.0, 0.0};
-    Eigen::Quaterniond tmp_quaternion(transform.getRotation().getW(),
-                                      transform.getRotation().getX(),
-                                      transform.getRotation().getY(),
-                                      transform.getRotation().getZ());
-    
-    // 将四元数转换为旋转矩阵
-    Eigen::Matrix3d rotationMatrix = tmp_quaternion.toRotationMatrix();
-    // 转换到camera_init坐标系下
-    mj.start_vel = rotationMatrix * (0.01*unit_vector);
-    mj.start_acc = rotationMatrix * (0.01*unit_vector);
-    // mj.start_vel = rotationMatrix * unit_vector;
-    // mj.start_acc = rotationMatrix * unit_vector;
+    // while (true && ros::ok())
+    // {
+    //   try
+    //   {
+    //     listener.lookupTransform("camera_init", "body", ros::Time(0), transform);  //查询变换
+    //     break;
+    //   }
+    //   catch (tf::TransformException& ex)
+    //   {
+    //     continue;
+    //   }
+    // }
+    // start_pt << transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z();
 
     // Execute the callback functions to update the grid map and check if there's a new goal
     ros::spinOnce();
@@ -414,7 +394,6 @@ int main(int argc, char** argv)
       ms = 1000 * (end.tv_sec - start.tv_sec) + 0.001 * (end.tv_usec - start.tv_usec);
     } while (ms < 100);  // Cycle in 100ms
   }
-  // thread_pubTotalPoint.join();
 
   return 0;
 }
