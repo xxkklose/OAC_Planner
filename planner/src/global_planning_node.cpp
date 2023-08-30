@@ -201,14 +201,25 @@ void findSolution()
       max_time += 100.0;
     }
     mj.waypoints.clear();
-    for(const auto &node : solution.nodes_){
+    double dist_sum, temp_dist = 0.0;
+    mj.waypoints.push_back(start_pt);
+    Vector3d temp_pt = start_pt;
+    for (auto it = solution.nodes_.rbegin(); it != solution.nodes_.rend(); ++it) {
+      const auto &node = *it;
+      temp_dist = (node->position_ - temp_pt).norm();
+      dist_sum += temp_dist;
+      if(dist_sum > 5.0){
+        dist_sum = 0.0;
+        temp_dist = 0.0;
+        break;
+      }
+      temp_pt = node->position_;
       mj.waypoints.push_back(node->position_);
     }
-    mj.waypoints.push_back(start_pt);
     Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
     mj.getTimeVector(mj.waypoints,0.4,0.2); //TODO:max_vel, max_acc
-    mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
-    // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix); //暂时先用零向量代替
+    // mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
+    mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix); //暂时先用零向量代替
 
     visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
@@ -227,15 +238,26 @@ void findSolution()
 
     solution = pf_rrt_star->planner(max_iter, max_time);
     mj.waypoints.clear();
-    for(const auto &node : solution.nodes_){
+    double dist_sum, temp_dist = 0.0;
+    mj.waypoints.push_back(start_pt);
+    Vector3d temp_pt = start_pt;
+    for (auto it = solution.nodes_.rbegin(); it != solution.nodes_.rend(); ++it) {
+      const auto &node = *it;
+      temp_dist = (node->position_ - temp_pt).norm();
+      dist_sum += temp_dist;
+      if(dist_sum > 5.0){
+        dist_sum = 0.0;
+        temp_dist = 0.0;
+        break;
+      }
+      temp_pt = node->position_;
       mj.waypoints.push_back(node->position_);
     }
 
-    mj.waypoints.push_back(start_pt);
     Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
     mj.getTimeVector(mj.waypoints,0.4,0.2); //TODO:max_vel, max_acc
-    mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
-    // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix);
+    // mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
+    mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix);
 
     visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
@@ -367,20 +389,6 @@ int main(int argc, char** argv)
     gettimeofday(&start, NULL);
     tf::StampedTransform transform;
     tf::TransformListener listener;
-
-    // while (true && ros::ok())
-    // {
-    //   try
-    //   {
-    //     listener.lookupTransform("camera_init", "body", ros::Time(0), transform);  //查询变换
-    //     break;
-    //   }
-    //   catch (tf::TransformException& ex)
-    //   {
-    //     continue;
-    //   }
-    // }
-    // start_pt << transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z();
 
     // Execute the callback functions to update the grid map and check if there's a new goal
     ros::spinOnce();
