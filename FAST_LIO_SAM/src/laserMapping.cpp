@@ -1878,11 +1878,20 @@ bool saveMapService(fast_lio_sam::save_mapRequest& req, fast_lio_sam::save_mapRe
       pcl::PointCloud<PointType>::Ptr globalSurfCloudDS(new pcl::PointCloud<PointType>());
       pcl::PointCloud<PointType>::Ptr globalMapCloud(new pcl::PointCloud<PointType>());
 
+      pcl::PassThrough<PointType> pass;
+      pass.setFilterFieldName("z");
+
       // 注意：拼接地图时，keyframe是lidar系，而fastlio更新后的存到的cloudKeyPoses6D 关键帧位姿是body系下的，需要把
       //cloudKeyPoses6D  转换为T_world_lidar 。 T_world_lidar = T_world_body * T_body_lidar , T_body_lidar 是外参
       for (int i = 0; i < (int)cloudKeyPoses6D->size(); i++) {
             //   *globalCornerCloud += *transformPointCloud(cornerCloudKeyFrames[i],  &cloudKeyPoses6D->points[i]);
-            *globalSurfCloud   += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
+            pcl::PointCloud<PointType>::Ptr surfCloudTemp(new pcl::PointCloud<PointType>());
+            *surfCloudTemp += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
+            pass.setInputCloud(surfCloudTemp);
+            pass.setFilterLimits(-99999.0, cloudKeyPoses6D->points[i].z + 2.0);
+            pass.filter(*surfCloudTemp);
+            *globalSurfCloud += *surfCloudTemp;
+            // *globalSurfCloud   += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
             // cout << "\r" << std::flush << "Processing feature cloud " << i << " of " << cloudKeyPoses6D->size() << " ...";
       }
 
@@ -1915,7 +1924,7 @@ bool saveMapService(fast_lio_sam::save_mapRequest& req, fast_lio_sam::save_mapRe
     //   *globalMapCloud += *globalCornerCloud;
       *globalMapCloud += *globalSurfCloud;
     //   pcl::io::savePCDFileBinary(saveMapDirectory + "/filterGlobalMap.pcd", *globalSurfCloudDS);       //  滤波后地图
-    //   int ret = pcl::io::savePCDFileBinary(saveMapDirectory + "/GlobalMap.pcd", *globalMapCloud);       //  稠密地图
+    //   int ret = pcl::io::savePCDFileBinary("/home/parallels/GlobalMap.pcd", *globalMapCloud);       //  稠密地图
     //   res.success = ret == 0;
 
     //   cout << "****************************************************" << endl;

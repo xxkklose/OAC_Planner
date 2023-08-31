@@ -4,6 +4,12 @@
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Path.h>
 #include <std_msgs/Float32MultiArray.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/synchronizer.h>
+#include <pcl/filters/passthrough.h>
+#include <queue>
 #include <fstream>
 #include <thread>
 
@@ -33,6 +39,10 @@ ros::Publisher tree_tra_pub;
 ros::Publisher pose_pub_to_control;
 ros::Publisher traj_jerk_vis_pub;
 ros::Publisher pose_pub;
+
+//动态保存点云地图
+std::queue<pcl::PointCloud<pcl::PointXYZ>> pointcloud_map_queue;
+const int queue_size = 10;
 
 // indicate whether the robot has a moving goal
 bool has_goal = false;
@@ -79,21 +89,60 @@ void rcvWaypointsCallback(const nav_msgs::Path& wp)
   ROS_INFO("Receive the planning target");
 }
 
+void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
+                    const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg) {
+  std::cout << "receive point cloud: " << surfmap_msg->data.size() << std::endl;
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+  pcl::fromROSMsg(*surfmap_msg, cloud);
+
+  pcl::PointCloud<pcl::PointXYZ> cloud_registered;
+  pcl::fromROSMsg(*cloud_registered_msg, cloud_registered);
+  pointcloud_map_queue.push(cloud_registered);
+  if(pointcloud_map_queue.size() > queue_size){
+    pointcloud_map_queue.pop();
+  }
+  std::queue<pcl::PointCloud<pcl::PointXYZ>> pointcloud_map_queue_copy = pointcloud_map_queue;
+  pcl::PointCloud<pcl::PointXYZ> cloud_registered_queue;
+  //遍历队列,将队列中的点云合并
+  while(!pointcloud_map_queue_copy.empty()){
+    cloud_registered_queue += pointcloud_map_queue_copy.front();
+    pointcloud_map_queue_copy.pop();
+  }
+
+  cloud += cloud_registered_queue;
+
+  // pcl::PassThrough<pcl::PointXYZ> pass;
+  // pass.setInputCloud(cloud_in);
+  // pass.setFilterFieldName("z");
+  // pass.setFilterLimits(-9999, 9999);
+  // pass.filter(cloud);
+
+  world->initGridMap(cloud);
+
+  for (const auto& pt : cloud)
+  {
+    Vector3d obstacle(pt.x, pt.y, pt.z);
+    // if(grid_map_count_[idx(0)][idx(1)][idx(2)] >= 1){
+    //     grid_map_[idx(0)][idx(1)][idx(2)]=false;
+    // }
+    world->setObs(obstacle);
+  }
+  for (const auto& pt : cloud)
+  {
+    Vector3d obstacle(pt.x, pt.y, pt.z);
+    world->addObs(obstacle);
+  }
+  visWorld(world, &grid_map_vis_pub);
+}
 /**
  *@brief receive point cloud to build the grid map
  */
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2& pointcloud_map)
 {
   std::cout << "receive point cloud: " << pointcloud_map.data.size() << std::endl;
-  pcl::PointCloud<pcl::PointXYZ> cloud_in;
   pcl::PointCloud<pcl::PointXYZ> cloud;
-  pcl::fromROSMsg(pointcloud_map, cloud_in);
+  pcl::fromROSMsg(pointcloud_map, cloud);
 
-  for(const auto &pt : cloud_in){
-    if(pt.z > -999999999 && pt.z < start_pt.z() + 2.0){
-      cloud.push_back(pt);
-    }
-  }
 
   world->initGridMap(cloud);
 
@@ -364,6 +413,14 @@ int main(int argc, char** argv)
   map_sub = nh.subscribe("map", 1, rcvPointCloudCallBack);
   wp_sub = nh.subscribe("waypoints", 1, rcvWaypointsCallback);
   pose_sub = nh.subscribe("/global_planning_node/robot_pose", 1, rcvPoseCallback);
+
+  message_filters::Subscriber<sensor_msgs::PointCloud2> surfmap_sub (nh, "map", 1000, ros::TransportHints().tcpNoDelay());
+  message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_registered_sub (nh, "/cloud_registered", 1000, ros::TransportHints().tcpNoDelay());
+
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> syncPolicy;
+  message_filters::Synchronizer<syncPolicy> sync(syncPolicy(10), surfmap_sub, cloud_registered_sub);  
+  sync.registerCallback(boost::bind(&multi_callback, _1, _2));
+
 
   grid_map_vis_pub = nh.advertise<sensor_msgs::PointCloud2>("grid_map_vis", 1);
   path_vis_pub = nh.advertise<visualization_msgs::Marker>("path_vis", 40);
