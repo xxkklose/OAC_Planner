@@ -6,7 +6,7 @@ map:
   map_y_u: 20.0
 
 planning: 
-  step_size: 0.4
+  step_size: 0.6
   h_surf_car: 0.5
 
   w_fit_plane: 1.0
@@ -19,6 +19,9 @@ planning:
   conv_thre: 0.1152
 
   radius_fit_plane: 0.5
+
+  max_vel: 0.05
+  max_acc: 0.1
   
  
 

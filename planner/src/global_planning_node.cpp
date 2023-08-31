@@ -53,6 +53,10 @@ Vector3d target_pt;
 World* world = NULL;
 Minimum_jerk mj = Minimum_jerk();
 PFRRTStar* pf_rrt_star = NULL;
+double max_vel;
+double max_acc;
+
+std::fstream file;
 
 //single thread for pose pub
 
@@ -207,6 +211,7 @@ void findSolution()
     for (auto it = solution.nodes_.rbegin(); it != solution.nodes_.rend(); ++it) {
       const auto &node = *it;
       temp_dist = (node->position_ - temp_pt).norm();
+      // if(temp_dist < 0.01) continue;
       dist_sum += temp_dist;
       if(dist_sum > 5.0){
         dist_sum = 0.0;
@@ -216,12 +221,36 @@ void findSolution()
       temp_pt = node->position_;
       mj.waypoints.push_back(node->position_);
     }
+    for(int i = 0; i < mj.waypoints.size(); i++){
+      printf("waypoints[%d]: %f, %f, %f\n", i, mj.waypoints[i](0), mj.waypoints[i](1), mj.waypoints[i](2));
+    }
     Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
-    mj.getTimeVector(mj.waypoints,0.4,0.2); //TODO:max_vel, max_acc
-    // mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
-    mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix); //暂时先用零向量代替
+    // mj.getTimeVector(mj.waypoints,0.3,0.1); //TODO:max_vel, max_acc
+    // // mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
+    // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix); //暂时先用零向量代替
 
-    visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
+    // file << "Start waypoints: \n";
+    // for(int i = 0; i < mj.waypoints.size(); i++){
+    //   file << mj.waypoints[i](0) << " " << mj.waypoints[i](1) << " " << mj.waypoints[i](2) << "\n";
+    // }
+    // file << "end \n";
+
+    // file << "Start timeVector: \n";
+    // for(int i = 0; i < mj.timeVector.size(); i++){
+    //   file << mj.timeVector[i] << " ";
+    // }
+    // file << "end \n";
+
+    // file << "Start coefficientMatrix: \n";
+    // for(int i = 0; i < coefficientMatrix.rows(); i++){
+    //   for(int j = 0; j < coefficientMatrix.cols(); j++){
+    //     file << coefficientMatrix(i, j) << " ";
+    //   }
+    //   file << "\n";
+    // }
+    // file << "end \n";
+
+    // visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
     if (!solution.nodes_.empty())
       ROS_INFO("Get a global path!");
@@ -237,29 +266,29 @@ void findSolution()
     double max_time = 100.0;
 
     solution = pf_rrt_star->planner(max_iter, max_time);
-    mj.waypoints.clear();
-    double dist_sum, temp_dist = 0.0;
-    mj.waypoints.push_back(start_pt);
-    Vector3d temp_pt = start_pt;
-    for (auto it = solution.nodes_.rbegin(); it != solution.nodes_.rend(); ++it) {
-      const auto &node = *it;
-      temp_dist = (node->position_ - temp_pt).norm();
-      dist_sum += temp_dist;
-      if(dist_sum > 5.0){
-        dist_sum = 0.0;
-        temp_dist = 0.0;
-        break;
-      }
-      temp_pt = node->position_;
-      mj.waypoints.push_back(node->position_);
-    }
+    // mj.waypoints.clear();
+    // double dist_sum, temp_dist = 0.0;
+    // mj.waypoints.push_back(start_pt);
+    // Vector3d temp_pt = start_pt;
+    // for (auto it = solution.nodes_.rbegin(); it != solution.nodes_.rend(); ++it) {
+    //   const auto &node = *it;
+    //   temp_dist = (node->position_ - temp_pt).norm();
+    //   dist_sum += temp_dist;
+    //   if(dist_sum > 5.0){
+    //     dist_sum = 0.0;
+    //     temp_dist = 0.0;
+    //     break;
+    //   }
+    //   temp_pt = node->position_;
+    //   mj.waypoints.push_back(node->position_);
+    // }
 
-    Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
-    mj.getTimeVector(mj.waypoints,0.4,0.2); //TODO:max_vel, max_acc
+    // Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
+    // mj.getTimeVector(mj.waypoints,max_vel,max_acc); //TODO:max_vel, max_acc
     // mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
-    mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix);
+    // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix);
 
-    visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
+    // visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
     if (!solution.nodes_.empty())
       ROS_INFO("Get a sub path!");
@@ -365,6 +394,11 @@ int main(int argc, char** argv)
 
   nh.param("planning/max_initial_time", max_initial_time, 1000.0);
 
+  nh.param("planning/max_vel", max_vel, 0.3);
+  nh.param("planning/max_acc", max_acc, 0.1);
+
+  file.open("/home/parallels/1.txt", std::ios::app);
+
   // // Initialization
   world = new World(resolution);
   
@@ -402,6 +436,10 @@ int main(int argc, char** argv)
       ms = 1000 * (end.tv_sec - start.tv_sec) + 0.001 * (end.tv_usec - start.tv_usec);
     } while (ms < 100);  // Cycle in 100ms
   }
+
+  if(!ros::ok()){
+    file.close();
+  } 
 
   return 0;
 }

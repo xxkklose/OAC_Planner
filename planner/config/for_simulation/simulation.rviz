@@ -45,15 +45,15 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 1.6312928199768066
-        Min Value: -2.768707275390625
+        Max Value: 2.027822494506836
+        Min Value: -1.0721776485443115
         Value: true
       Axis: Z
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 193; 193; 193
       Color Transformer: AxisColor
-      Decay Time: 10000
+      Decay Time: 0
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
@@ -75,7 +75,7 @@ Visualization Manager:
       Marker Topic: /global_planning_node/goal_vis
       Name: Marker
       Namespaces:
-        Goal: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -83,7 +83,7 @@ Visualization Manager:
       Marker Topic: /global_planning_node/path_vis
       Name: Marker
       Namespaces:
-        Path: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -261,7 +261,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 15.083090782165527
+      Distance: 9.801580429077148
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -269,17 +269,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 25.62312889099121
-        Y: -1.1066834926605225
-        Z: 8.577384948730469
+        X: 11.029266357421875
+        Y: -0.19957998394966125
+        Z: 6.41737699508667
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2947975397109985
+      Pitch: 1.2197976112365723
       Target Frame: body
-      Yaw: 4.265036106109619
+      Yaw: 4.235035419464111
     Saved:
       - Class: rviz/Orbit
         Distance: 79.24484252929688

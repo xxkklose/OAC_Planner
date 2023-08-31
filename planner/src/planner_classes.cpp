@@ -81,7 +81,7 @@ Plane::Plane(const Eigen::Vector3d &p_surface,World* world,const double &radius,
     
     //calculate indicator1:flatness      
     float flatness = 0;
-    for(size_t i = 0; i < pt_num; i++) flatness+=powf(normal_vector.dot(A.row(i)),4);
+    for(size_t i = 0; i < pt_num; i++) flatness+=powf(normal_vector.dot(A.row(i)),2);
     flatness /= (1+pt_num);
 
     //calculate indicator2:slope
@@ -260,7 +260,7 @@ bool World::collisionFree(const Node* node_start,const Node* node_end)
         {
             for(int z=-2; z<=2; z++)
             {
-                check_point=check_center+rotation_matrix*Vector3d(0,0.15*y,0.1*z);
+                check_point=check_center+rotation_matrix*Vector3d(0,0.2*y,0.1*z);
                 if(!isFree(check_point)) return false;
             }
         }
