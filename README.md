@@ -75,12 +75,12 @@ source devel/setup.bash
 roslaunch planner bringup.launch
 ```
 
-2. Start with a Livox series Lidar(Defult horizon)
+2. Start with a Livox series Lidar(Defult mid360)
 
 ```
 cd OAC_Planner
 source devel/setup.bash
-roslaunch planner horizon.launch
+roslaunch planner mid360.launch
 ```
  
 
