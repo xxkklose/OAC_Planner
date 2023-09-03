@@ -1885,13 +1885,13 @@ bool saveMapService(fast_lio_sam::save_mapRequest& req, fast_lio_sam::save_mapRe
       //cloudKeyPoses6D  转换为T_world_lidar 。 T_world_lidar = T_world_body * T_body_lidar , T_body_lidar 是外参
       for (int i = 0; i < (int)cloudKeyPoses6D->size(); i++) {
             //   *globalCornerCloud += *transformPointCloud(cornerCloudKeyFrames[i],  &cloudKeyPoses6D->points[i]);
-            pcl::PointCloud<PointType>::Ptr surfCloudTemp(new pcl::PointCloud<PointType>());
-            *surfCloudTemp += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
-            pass.setInputCloud(surfCloudTemp);
-            pass.setFilterLimits(-99999.0, cloudKeyPoses6D->points[i].z + 2.0);
-            pass.filter(*surfCloudTemp);
-            *globalSurfCloud += *surfCloudTemp;
-            // *globalSurfCloud   += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
+            // pcl::PointCloud<PointType>::Ptr surfCloudTemp(new pcl::PointCloud<PointType>());
+            // *surfCloudTemp += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
+            // pass.setInputCloud(surfCloudTemp);
+            // pass.setFilterLimits(-99999.0, cloudKeyPoses6D->points[i].z + 2.0);
+            // pass.filter(*surfCloudTemp);
+            // *globalSurfCloud += *surfCloudTemp;
+            *globalSurfCloud   += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
             // cout << "\r" << std::flush << "Processing feature cloud " << i << " of " << cloudKeyPoses6D->size() << " ...";
       }
 
@@ -1919,10 +1919,13 @@ bool saveMapService(fast_lio_sam::save_mapRequest& req, fast_lio_sam::save_mapRe
         // pcl::io::savePCDFileBinary(saveMapDirectory + "/CornerMap.pcd", *globalCornerCloud);       
         // pcl::io::savePCDFileBinary(saveMapDirectory + "/SurfMap.pcd", *globalSurfCloud);           //  稠密点云地图
       }
+    pass.setInputCloud(globalSurfCloudDS);
+    pass.setFilterLimits(-99999.0, msg_body_pose.pose.position.z + 2.0);
+    pass.filter(*globalSurfCloudDS);
 
       // 保存到一起，全局关键帧特征点集合
     //   *globalMapCloud += *globalCornerCloud;
-      *globalMapCloud += *globalSurfCloud;
+    //   *globalMapCloud += *globalSurfCloudDS;
     //   pcl::io::savePCDFileBinary(saveMapDirectory + "/filterGlobalMap.pcd", *globalSurfCloudDS);       //  滤波后地图
     //   int ret = pcl::io::savePCDFileBinary("/home/parallels/GlobalMap.pcd", *globalMapCloud);       //  稠密地图
     //   res.success = ret == 0;
@@ -1933,8 +1936,8 @@ bool saveMapService(fast_lio_sam::save_mapRequest& req, fast_lio_sam::save_mapRe
       // visial optimize global map on viz
     ros::Time timeLaserInfoStamp = ros::Time().fromSec(lidar_end_time);
     string odometryFrame = "camera_init";
-    // publishCloud(&pubOptimizedGlobalMap, globalSurfCloudDS, timeLaserInfoStamp, odometryFrame);
-    publishCloud(&pubOptimizedGlobalMap, globalMapCloud, timeLaserInfoStamp, odometryFrame);
+    publishCloud(&pubOptimizedGlobalMap, globalSurfCloudDS, timeLaserInfoStamp, odometryFrame);
+    // publishCloud(&pubOptimizedGlobalMap, globalMapCloud, timeLaserInfoStamp, odometryFrame);
 
       return true;
 }

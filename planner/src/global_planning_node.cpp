@@ -72,7 +72,7 @@ std::fstream file;
 
 // function declaration
 void rcvWaypointsCallback(const nav_msgs::Path& wp);
-void rcvPointCloudCallBack(const sensor_msgs::PointCloud2& pointcloud_map);
+// void rcvPointCloudCallBack(const sensor_msgs::PointCloud2& pointcloud_map);
 void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* _path_interpolation_pub);
 void findSolution();
 void callPlanner();
@@ -137,30 +137,30 @@ void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
 /**
  *@brief receive point cloud to build the grid map
  */
-void rcvPointCloudCallBack(const sensor_msgs::PointCloud2& pointcloud_map)
-{
-  std::cout << "receive point cloud: " << pointcloud_map.data.size() << std::endl;
-  pcl::PointCloud<pcl::PointXYZ> cloud;
-  pcl::fromROSMsg(pointcloud_map, cloud);
+// void rcvPointCloudCallBack(const sensor_msgs::PointCloud2& pointcloud_map)
+// {
+//   std::cout << "receive point cloud: " << pointcloud_map.data.size() << std::endl;
+//   pcl::PointCloud<pcl::PointXYZ> cloud;
+//   pcl::fromROSMsg(pointcloud_map, cloud);
 
 
-  world->initGridMap(cloud);
+//   world->initGridMap(cloud);
 
-  for (const auto& pt : cloud)
-  {
-    Vector3d obstacle(pt.x, pt.y, pt.z);
-    // if(grid_map_count_[idx(0)][idx(1)][idx(2)] >= 1){
-    //     grid_map_[idx(0)][idx(1)][idx(2)]=false;
-    // }
-    world->setObs(obstacle);
-  }
-  for (const auto& pt : cloud)
-  {
-    Vector3d obstacle(pt.x, pt.y, pt.z);
-    world->addObs(obstacle);
-  }
-  visWorld(world, &grid_map_vis_pub);
-}
+//   for (const auto& pt : cloud)
+//   {
+//     Vector3d obstacle(pt.x, pt.y, pt.z);
+//     // if(grid_map_count_[idx(0)][idx(1)][idx(2)] >= 1){
+//     //     grid_map_[idx(0)][idx(1)][idx(2)]=false;
+//     // }
+//     world->setObs(obstacle);
+//   }
+//   for (const auto& pt : cloud)
+//   {
+//     Vector3d obstacle(pt.x, pt.y, pt.z);
+//     world->addObs(obstacle);
+//   }
+//   visWorld(world, &grid_map_vis_pub);
+// }
 
 void rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
 {
@@ -410,7 +410,7 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "global_planning_node");
   ros::NodeHandle nh("~");
 
-  map_sub = nh.subscribe("map", 1, rcvPointCloudCallBack);
+  // map_sub = nh.subscribe("map", 1, rcvPointCloudCallBack);
   wp_sub = nh.subscribe("waypoints", 1, rcvWaypointsCallback);
   pose_sub = nh.subscribe("/global_planning_node/robot_pose", 1, rcvPoseCallback);
 
