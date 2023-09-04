@@ -39,6 +39,7 @@ ros::Publisher tree_tra_pub;
 ros::Publisher pose_pub_to_control;
 ros::Publisher traj_jerk_vis_pub;
 ros::Publisher pose_pub;
+ros::Publisher path_to_control;
 
 //动态保存点云地图
 std::queue<pcl::PointCloud<pcl::PointXYZ>> pointcloud_map_queue;
@@ -72,10 +73,10 @@ std::fstream file;
 
 // function declaration
 void rcvWaypointsCallback(const nav_msgs::Path& wp);
-// void rcvPointCloudCallBack(const sensor_msgs::PointCloud2& pointcloud_map);
 void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* _path_interpolation_pub);
 void findSolution();
 void callPlanner();
+void pubPathToControl(ros::Publisher* path_to_control_pub);
 
 /**
  *@brief receive goal from rviz
@@ -143,10 +144,10 @@ void rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
   // 将四元数转换为旋转矩阵
   Eigen::Matrix3d rotationMatrix = tmp_quaternion.toRotationMatrix();
   // 转换到camera_init坐标系下
-  mj.start_vel = rotationMatrix * (0.01*unit_vector);
-  mj.start_acc = rotationMatrix * (0.01*unit_vector);
-  mj.start_vel = rotationMatrix * unit_vector;
-  mj.start_acc = rotationMatrix * unit_vector;
+  // mj.start_vel = rotationMatrix * (0.01*unit_vector);
+  // mj.start_acc = rotationMatrix * (0.01*unit_vector);
+  // // mj.start_vel = rotationMatrix * unit_vector;
+  // // mj.start_acc = rotationMatrix * unit_vector;
 
   geometry_msgs::PoseStamped pose_to_control;
   pose_to_control.header.frame_id = "camera_init";
@@ -227,24 +228,22 @@ void findSolution()
     for (auto it = solution.nodes_.rbegin(); it != solution.nodes_.rend(); ++it) {
       const auto &node = *it;
       temp_dist = (node->position_ - temp_pt).norm();
-      // if(temp_dist < 0.01) continue;
-      dist_sum += temp_dist;
-      if(dist_sum > 5.0){
-        dist_sum = 0.0;
-        temp_dist = 0.0;
-        break;
-      }
+      if(temp_dist < 0.1) continue;
+      // dist_sum += temp_dist;
+      // if(dist_sum > 5.0){
+      //   dist_sum = 0.0;
+      //   temp_dist = 0.0;
+      //   break;
+      // }
       temp_pt = node->position_;
       mj.waypoints.push_back(node->position_);
     }
-    for(int i = 0; i < mj.waypoints.size(); i++){
-      printf("waypoints[%d]: %f, %f, %f\n", i, mj.waypoints[i](0), mj.waypoints[i](1), mj.waypoints[i](2));
-    }
     Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
-    // mj.getTimeVector(mj.waypoints,0.3,0.1); //TODO:max_vel, max_acc
-    // // mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
-    // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix); //暂时先用零向量代替
+    // mj.getTimeVector(0.3,0.1); //TODO:max_vel, max_acc
+    // mj.solve_minimum_jerk(mj.start_vel, mj.start_acc, coefficientMatrix);
+    // mj.solve_minimum_jerk({0,0,0}, {0,0,0}, coefficientMatrix); //暂时先用零向量代替
 
+    // file << "Time: " << ros::Time::now() << "\n";
     // file << "Start waypoints: \n";
     // for(int i = 0; i < mj.waypoints.size(); i++){
     //   file << mj.waypoints[i](0) << " " << mj.waypoints[i](1) << " " << mj.waypoints[i](2) << "\n";
@@ -317,6 +316,7 @@ void findSolution()
   pubInterpolatedPath(solution.nodes_, &path_interpolation_pub);
   visPath(solution.nodes_, &path_vis_pub, start_pt);
   visSurf(solution.nodes_, &surf_vis_pub);
+  pubPathToControl(&path_to_control);
 
   // When the PF-RRT* generates a short enough global path,it's considered that the robot has
   // reached the goal region.
@@ -372,6 +372,26 @@ void callPlanner()
     ROS_INFO("The tree is large enough.Stop expansion!Current size: %d", (int)(pf_rrt_star->tree().size()));
 }
 
+void pubPathToControl(ros::Publisher* path_to_control_pub){
+  ROS_WARN("start_pt: %f, %f, %f", start_pt(0), start_pt(1), start_pt(2));
+  if(path_to_control_pub == NULL)
+    return;
+  nav_msgs::Path path_to_control_msg;
+  path_to_control_msg.header.frame_id = "camera_init";
+  path_to_control_msg.header.stamp = ros::Time::now();
+  for(int i = 0; i < mj.waypoints.size(); i++){
+    geometry_msgs::PoseStamped pose;
+    pose.header.frame_id = "camera_init";
+    pose.header.stamp = ros::Time::now();
+    pose.pose.position.x = mj.waypoints[i](0);
+    pose.pose.position.y = mj.waypoints[i](1);
+    pose.pose.position.z = mj.waypoints[i](2);
+    path_to_control_msg.poses.push_back(pose);
+    file << "path point " << i << " : " << mj.waypoints[i](0) << " " << mj.waypoints[i](1) << " " << mj.waypoints[i](2) << "\n";
+  }
+  path_to_control_pub->publish(path_to_control_msg);
+}
+
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "global_planning_node");
@@ -396,6 +416,7 @@ int main(int argc, char** argv)
   tree_tra_pub = nh.advertise<std_msgs::Float32MultiArray>("tree_tra", 40);
   path_interpolation_pub = nh.advertise<std_msgs::Float32MultiArray>("global_path", 1000);
   pose_pub = nh.advertise<geometry_msgs::PoseStamped>("robotPose", 40);
+  path_to_control = nh.advertise<nav_msgs::Path>("path_to_control", 40);
   traj_jerk_vis_pub = nh.advertise<nav_msgs::Path>("trajectory_path", 40);
 
   nh.param("map/resolution", resolution, 0.1);
@@ -420,7 +441,7 @@ int main(int argc, char** argv)
   nh.param("planning/max_vel", max_vel, 0.3);
   nh.param("planning/max_acc", max_acc, 0.1);
 
-  file.open("/home/parallels/1.txt", std::ios::app);
+  // file.open("/home/parallels/2.txt", std::ios::app);
 
   // // Initialization
   world = new World(resolution);

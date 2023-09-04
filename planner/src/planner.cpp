@@ -336,9 +336,9 @@ Vector3d PFRRTStar::sampleInEllipsoid()
 
         Vector3d center= (node_origin_->position_+node_target_->position_)*0.5;
         point=random_ellipsoid+center;
-        if((point - node_origin_->position_).norm() > 1.0)
+        if((point - node_origin_->position_).norm() > 1.0 )
             disFlag=true;
-    }
+    }       
     return point;
 }
 
@@ -745,31 +745,32 @@ Minimum_jerk::Minimum_jerk(){}
 Minimum_jerk::~Minimum_jerk(){}
 
 
-void Minimum_jerk::getTimeVector(std::vector<Eigen::Vector3d> points, double max_vel, double max_acc){
+void Minimum_jerk::getTimeVector(double max_vel, double max_acc){
     timeVector.clear();
-    for (int i = 0; i < points.size() - 1; i++)
+    for (int i = 0; i < waypoints.size() - 1; i++)
     {
-        double dist = (points[i+1] - points[i]).norm();
+        double dist = (waypoints[i+1] - waypoints[i]).norm();
         double t = timeTrapzVel(dist, max_vel, max_acc);
         timeVector.push_back(t);
     }  
 }
 
 void Minimum_jerk::solve_minimum_jerk(
-    const std::vector<Eigen::Vector3d> &points,
     const Eigen::Vector3d &start_vel,
     const Eigen::Vector3d &start_acc,
     Eigen::MatrixX3d &coefficientMatrix
     ){
 
-    int n = points.size() - 1; //pieceNum
-    this->waypoints = points;
+    int n = waypoints.size() - 1; //pieceNum
     Eigen::Vector3d start_pt,end_pt;
-    start_pt = points[0];
-    end_pt = points[n];
+    start_pt = waypoints[0];
+    end_pt = waypoints[n];
 
     Eigen::MatrixXd B = Eigen::MatrixXd::Zero(6*n, 3);
 	Eigen::MatrixXd M = Eigen::MatrixXd::Zero(6*n, 6*n);
+
+    std::cout << "B: " << B.rows() << " " << B.cols() << std::endl;
+    std::cout << "M: " << M.rows() << " " << M.cols() << std::endl;
 
     //初始点配置
     Eigen::MatrixXd F0 = Eigen::MatrixXd::Zero(3, 6);
@@ -781,6 +782,9 @@ void Minimum_jerk::solve_minimum_jerk(
     D0 << start_pt(0), start_pt(1), start_pt(2),
           start_vel(0), start_vel(1), start_vel(2),
           start_acc(0), start_acc(1), start_acc(2);
+
+    std::cout << "F0: " << F0.rows() << " " << F0.cols() << std::endl;
+    std::cout << "D0: " << D0.rows() << " " << D0.cols() << std::endl;
 
     B.block(0,0,3,3) = D0;
     M.block(0,0,3,6) = F0;
