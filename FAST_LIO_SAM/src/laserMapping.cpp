@@ -850,6 +850,7 @@ void recontructIKdTree(){
             subMapKeyPoses->push_back(cloudKeyPoses3D->points[pointSearchIndGlobalMap[i]]);     //  subMap的pose集合
         // 降采样
         pcl::VoxelGrid<PointType> downSizeFilterSubMapKeyPoses;
+        double leafSize = 0.5;
         downSizeFilterSubMapKeyPoses.setLeafSize(globalMapVisualizationPoseDensity, globalMapVisualizationPoseDensity, globalMapVisualizationPoseDensity); // for global map visualization
         downSizeFilterSubMapKeyPoses.setInputCloud(subMapKeyPoses);
         downSizeFilterSubMapKeyPoses.filter(*subMapKeyPosesDS);         //  subMap poses  downsample
@@ -1891,9 +1892,13 @@ bool saveMapService(fast_lio_sam::save_mapRequest& req, fast_lio_sam::save_mapRe
             // pass.setFilterLimits(-99999.0, cloudKeyPoses6D->points[i].z + 2.0);
             // pass.filter(*surfCloudTemp);
             // *globalSurfCloud += *surfCloudTemp;
+            // if(i == 0 && (cloudKeyPoses6D->points[i] - cloudKeyPoses6D->points[i-1]).norm() < 0.3) continue;
             *globalSurfCloud   += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
             // cout << "\r" << std::flush << "Processing feature cloud " << i << " of " << cloudKeyPoses6D->size() << " ...";
       }
+
+      
+
 
       if(req.resolution != 0)
       {
@@ -1920,7 +1925,8 @@ bool saveMapService(fast_lio_sam::save_mapRequest& req, fast_lio_sam::save_mapRe
         // pcl::io::savePCDFileBinary(saveMapDirectory + "/SurfMap.pcd", *globalSurfCloud);           //  稠密点云地图
       }
     pass.setInputCloud(globalSurfCloudDS);
-    pass.setFilterLimits(msg_body_pose.pose.position.z - 0.8, msg_body_pose.pose.position.z + 2.0);
+    pass.setFilterLimits(-9999.0, msg_body_pose.pose.position.z + 2.0);
+    // pass.setFilterLimits(msg_body_pose.pose.position.z - 0.8, msg_body_pose.pose.position.z + 2.0);
     pass.filter(*globalSurfCloudDS);
 
       // 保存到一起，全局关键帧特征点集合
@@ -1978,7 +1984,8 @@ void publishGlobalMap()
     std::vector<float> pointSearchSqDisGlobalMap;
     mtx.lock();
     kdtreeGlobalMap->setInputCloud(cloudKeyPoses3D);
-    kdtreeGlobalMap->radiusSearch(cloudKeyPoses3D->back(), globalMapVisualizationSearchRadius, pointSearchIndGlobalMap, pointSearchSqDisGlobalMap, 0);
+    //修改globalMapVisualizationSearchRadius为10,不用全局globalMapVisualizationSearchRadius
+    kdtreeGlobalMap->radiusSearch(cloudKeyPoses3D->back(), 10.0, pointSearchIndGlobalMap, pointSearchSqDisGlobalMap, 0);
     mtx.unlock();
 
     for (int i = 0; i < (int)pointSearchIndGlobalMap.size(); ++i)
@@ -1999,10 +2006,18 @@ void publishGlobalMap()
         *globalMapKeyFrames += *transformPointCloud(surfCloudKeyFrames[thisKeyInd], &cloudKeyPoses6D->points[thisKeyInd]); //  fast_lio only use  surfCloud
     }
     // 降采样，发布
-    pcl::VoxelGrid<PointType> downSizeFilterGlobalMapKeyFrames;                                                                                   // for global map visualization
-    downSizeFilterGlobalMapKeyFrames.setLeafSize(globalMapVisualizationLeafSize, globalMapVisualizationLeafSize, globalMapVisualizationLeafSize); // for global map visualization
-    downSizeFilterGlobalMapKeyFrames.setInputCloud(globalMapKeyFrames);
-    downSizeFilterGlobalMapKeyFrames.filter(*globalMapKeyFramesDS);
+    // pcl::VoxelGrid<PointType> downSizeFilterGlobalMapKeyFrames;                                                                                   // for global map visualization
+    // downSizeFilterGlobalMapKeyFrames.setLeafSize(globalMapVisualizationLeafSize, globalMapVisualizationLeafSize, globalMapVisualizationLeafSize); // for global map visualization
+    // downSizeFilterGlobalMapKeyFrames.setInputCloud(globalMapKeyFrames);
+    // downSizeFilterGlobalMapKeyFrames.filter(*globalMapKeyFramesDS);
+    // publishCloud(&pubLaserCloudSurround, globalMapKeyFramesDS, timeLaserInfoStamp, odometryFrame);
+    
+    pcl::PassThrough<PointType> pass;
+    pass.setInputCloud(globalMapKeyFrames);
+    pass.setFilterFieldName("z");
+    pass.setFilterLimits(-9999.0, msg_body_pose.pose.position.z + 2.0);
+    pass.filter(*globalMapKeyFramesDS);
+
     publishCloud(&pubLaserCloudSurround, globalMapKeyFramesDS, timeLaserInfoStamp, odometryFrame);
 }
 
@@ -2620,7 +2635,7 @@ int main(int argc, char **argv)
                 publish_path_update(pubPathUpdate);             //   发布经过isam2优化后的路径
                 static int jjj = 0;
                 jjj++;
-                if (jjj % 100 == 0)
+                if (jjj % 10 == 0)
                 {
                     publishGlobalMap();             //  发布局部点云特征地图
                 }
@@ -2631,7 +2646,7 @@ int main(int argc, char **argv)
                 publish_frame_body(pubLaserCloudFull_body);         //  发布imu系下的点云
 
 
-            if(savePCD)  saveMap();
+            // if(savePCD)  saveMap();
 
             // publish_effect_world(pubLaserCloudEffect);
             // publish_map(pubLaserCloudMap);
