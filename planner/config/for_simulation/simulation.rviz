@@ -45,8 +45,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 1.6522959470748901
-        Min Value: -2.8477041721343994
+        Max Value: 3.087286949157715
+        Min Value: -3.112713098526001
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -75,7 +75,7 @@ Visualization Manager:
       Marker Topic: /global_planning_node/goal_vis
       Name: Marker
       Namespaces:
-        Goal: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -83,7 +83,7 @@ Visualization Manager:
       Marker Topic: /global_planning_node/path_vis
       Name: Marker
       Namespaces:
-        Path: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -270,10 +270,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 14.227642059326172
+      Scale: 35.22711944580078
       Target Frame: body
-      X: 26.19891929626465
-      Y: -0.4190339744091034
+      X: 0.6257906556129456
+      Y: -0.5921257138252258
     Saved:
       - Class: rviz/Orbit
         Distance: 79.24484252929688

@@ -1920,7 +1920,7 @@ bool saveMapService(fast_lio_sam::save_mapRequest& req, fast_lio_sam::save_mapRe
         // pcl::io::savePCDFileBinary(saveMapDirectory + "/SurfMap.pcd", *globalSurfCloud);           //  稠密点云地图
       }
     pass.setInputCloud(globalSurfCloudDS);
-    pass.setFilterLimits(-99999.0, msg_body_pose.pose.position.z + 2.0);
+    pass.setFilterLimits(msg_body_pose.pose.position.z - 0.8, msg_body_pose.pose.position.z + 2.0);
     pass.filter(*globalSurfCloudDS);
 
       // 保存到一起，全局关键帧特征点集合

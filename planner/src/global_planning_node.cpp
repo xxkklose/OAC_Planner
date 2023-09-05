@@ -43,7 +43,7 @@ ros::Publisher path_to_control;
 
 //动态保存点云地图
 std::queue<pcl::PointCloud<pcl::PointXYZ>> pointcloud_map_queue;
-const int queue_size = 10;
+const int queue_size = 20;
 
 // indicate whether the robot has a moving goal
 bool has_goal = false;
@@ -229,6 +229,8 @@ void findSolution()
       const auto &node = *it;
       temp_dist = (node->position_ - temp_pt).norm();
       if(temp_dist < 0.1) continue;
+      double cos_theta = (node->position_ - start_pt).dot(node->position_ - target_pt);
+      if(cos_theta > 0 && cos_theta < 0.3) continue;
       // dist_sum += temp_dist;
       // if(dist_sum > 5.0){
       //   dist_sum = 0.0;
@@ -441,7 +443,7 @@ int main(int argc, char** argv)
   nh.param("planning/max_vel", max_vel, 0.3);
   nh.param("planning/max_acc", max_acc, 0.1);
 
-  // file.open("/home/parallels/2.txt", std::ios::app);
+  file.open("/home/beihang705/2.txt", std::ios::app);
 
   // // Initialization
   world = new World(resolution);
