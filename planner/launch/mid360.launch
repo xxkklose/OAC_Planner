@@ -13,14 +13,13 @@
 
   <node pkg="planner" type="global_planning_node" name="global_planning_node" output="screen" required = "true">
       <remap from="~waypoints"       to="/waypoint_generator/waypoints"/>
-      <!-- <remap from="~map"             to="/fast_lio_sam/mapping/map_global_optimized"/>  -->
-      <remap from="~map"             to="/fast_lio_sam/mapping/keyframe_submap"/> 
+      <remap from="~map"             to="/fast_lio_sam/mapping/map_global_optimized"/> 
+      <!-- <remap from="~map"             to="/fast_lio_sam/mapping/keyframe_submap"/>  -->
 
       <rosparam command="load" file="$(find planner)/config/for_simulation/map1.yaml"/>
   </node>
 
-  <node pkg="planner" type="local_obs_node" name="local_obs_node" output="screen" required = "true">
-  <!-- <node pkg="planner" type="local_obs_node" name="local_obs_node" output="screen" required = "true" launch-prefix="gdb -ex"> -->
+  <!-- <node pkg="planner" type="local_obs_node" name="local_obs_node" output="screen" required = "true">
       <remap from="~map"             to="/cloud_registered"/> 
 
       <param name="map/resolution"      value="0.1" />
@@ -30,11 +29,11 @@
       <param name="map/local_y_u"       value="1.8"/>
       <param name="map/local_z_l"       value="-1.0"/>
       <param name="map/local_z_u"       value="0.4"/>
-  </node>
+  </node> -->
 
-  <node pkg="gpr" type="gpr_path" name="gpr_path" output="screen" required="true">
+  <!-- <node pkg="gpr" type="gpr_path" name="gpr_path" output="screen" required="true">
       <param name="file/cfg_path" type="string" value="$(find gpr)/config/hyperparam.txt"/>
-  </node>
+  </node> -->
     <!-- <node name="local_planner" pkg="local_planner" type="local_planner.py" launch-prefix="gnome-terminal -x">
   </node> -->
 

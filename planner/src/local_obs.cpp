@@ -26,7 +26,7 @@ void rcvlivoxCallBack(const sensor_msgs::PointCloud2& livox_points);
 
 void rcvlivoxCallBack(const sensor_msgs::PointCloud2& livox_points)
 {
-  ROS_INFO("Receive livox!");
+  // ROS_INFO("Receive livox!");
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::fromROSMsg(livox_points, *cloud);

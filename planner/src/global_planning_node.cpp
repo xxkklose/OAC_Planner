@@ -40,6 +40,7 @@ ros::Publisher pose_pub_to_control;
 ros::Publisher traj_jerk_vis_pub;
 ros::Publisher pose_pub;
 ros::Publisher path_to_control;
+ros::Publisher cloud_registered_pub;
 
 //动态保存点云地图
 std::queue<pcl::PointCloud<pcl::PointXYZ>> pointcloud_map_queue;
@@ -92,11 +93,17 @@ void rcvWaypointsCallback(const nav_msgs::Path& wp)
 
 void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
                     const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg) {
-  std::cout << "receive point cloud: " << surfmap_msg->data.size() << std::endl;
-  pcl::PointCloud<pcl::PointXYZ> cloud;
-  pcl::fromROSMsg(*surfmap_msg, cloud);
+  // std::cout << "receive point cloud: " << surfmap_msg->data.size() << std::endl;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::fromROSMsg(*surfmap_msg, *cloud);
+
+  sensor_msgs::PointCloud2 msg;
+  msg = *surfmap_msg;
+  msg.header.stamp = ros::Time::now();
+  cloud_registered_pub.publish(msg);
 
   pcl::PointCloud<pcl::PointXYZ> cloud_registered;
+
   pcl::fromROSMsg(*cloud_registered_msg, cloud_registered);
   pointcloud_map_queue.push(cloud_registered);
   if(pointcloud_map_queue.size() > queue_size){
@@ -110,11 +117,22 @@ void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
     pointcloud_map_queue_copy.pop();
   }
 
-  cloud += cloud_registered_queue;
+  *cloud += cloud_registered_queue;
 
-  world->initGridMap(cloud);
+  pcl::PassThrough<pcl::PointXYZ> pass;
+  pass.setInputCloud(cloud);
+  pass.setFilterFieldName("z");
+  pass.setFilterLimits(-9999, start_pt(2) + 2.0);
+  pass.filter(*cloud);
+  pcl::PointXYZ point;
+  point.x = start_pt(0);
+  point.y = start_pt(1);
+  point.z = start_pt(2);
+  cloud->points.push_back(point);
 
-  for (const auto& pt : cloud)
+  world->initGridMap(*cloud);
+
+  for (const auto& pt : *cloud)
   {
     Vector3d obstacle(pt.x, pt.y, pt.z);
     // if(grid_map_count_[idx(0)][idx(1)][idx(2)] >= 1){
@@ -122,7 +140,7 @@ void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
     // }
     world->setObs(obstacle);
   }
-  for (const auto& pt : cloud)
+  for (const auto& pt : *cloud)
   {
     Vector3d obstacle(pt.x, pt.y, pt.z);
     world->addObs(obstacle);
@@ -196,8 +214,8 @@ void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* path_int
  */
 void findSolution()
 {
-  printf("=========================================================================\n");
-  ROS_INFO("Start calling PF-RRT*");
+  // printf("=========================================================================\n");
+  // ROS_INFO("Start calling PF-RRT*");
   Path solution = Path();
 
   pf_rrt_star->initWithGoal(start_pt, target_pt);
@@ -212,7 +230,7 @@ void findSolution()
   //       global planning and try to generate a path
   else if (pf_rrt_star->state() == Global)
   {
-    ROS_INFO("Starting PF-RRT* algorithm at the state of global planning");
+    // ROS_INFO("Starting PF-RRT* algorithm at the state of global planning");
     int max_iter = 5000;
     double max_time = 100.0;
 
@@ -269,16 +287,16 @@ void findSolution()
 
     // visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
-    if (!solution.nodes_.empty())
-      ROS_INFO("Get a global path!");
-    else
-      ROS_WARN("No solution found!");
+    // if (!solution.nodes_.empty())
+      // ROS_INFO("Get a global path!");
+    // else
+      // ROS_WARN("No solution found!");
   }
   // Case3: If the origin can be projected while the target can not,the PF-RRT*
   //       will try to find a temporary target for transitions.
   else
   {
-    ROS_INFO("Starting PF-RRT* algorithm at the state of rolling planning");
+    // ROS_INFO("Starting PF-RRT* algorithm at the state of rolling planning");
     int max_iter = 1500;
     double max_time = 100.0;
 
@@ -307,13 +325,13 @@ void findSolution()
 
     // visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
-    if (!solution.nodes_.empty())
-      ROS_INFO("Get a sub path!");
-    else
-      ROS_WARN("No solution found!");
+    // if (!solution.nodes_.empty())
+    //   ROS_INFO("Get a sub path!");
+    // else
+    //   ROS_WARN("No solution found!");
   }
-  ROS_INFO("End calling PF-RRT*");
-  printf("=========================================================================\n");
+  // // ROS_INFO("End calling PF-RRT*");
+  // printf("=========================================================================\n");
 
   pubInterpolatedPath(solution.nodes_, &path_interpolation_pub);
   visPath(solution.nodes_, &path_vis_pub, start_pt);
@@ -327,7 +345,7 @@ void findSolution()
     has_goal = false;
     visOriginAndGoal({}, &goal_vis_pub);  // Passing an empty set to delete the previous display
     visPath({}, &path_vis_pub, start_pt);
-    ROS_INFO("The Robot has achieved the goal!!!");
+    // ROS_INFO("The Robot has achieved the goal!!!");
   }
 
   if (solution.type_ == Path::Empty)
@@ -358,7 +376,7 @@ void callPlanner()
       int max_iter = 550;
       double max_time = 100.0;
       pf_rrt_star->planner(max_iter, max_time);
-      ROS_INFO("Current size of tree: %d", (int)(pf_rrt_star->tree().size()));
+      // ROS_INFO("Current size of tree: %d", (int)(pf_rrt_star->tree().size()));
     }
     else if(pf_rrt_star->state() != WithoutGoal)
       ROS_WARN("The start point can't be projected,unable to execute PF-RRT* algorithm");
@@ -370,12 +388,12 @@ void callPlanner()
     init_time_cost = 0.0;
   }
   // The expansion of tree will stop after the process of initialization takes more than 1s
-  else
-    ROS_INFO("The tree is large enough.Stop expansion!Current size: %d", (int)(pf_rrt_star->tree().size()));
+  // else
+    // ROS_INFO("The tree is large enough.Stop expansion!Current size: %d", (int)(pf_rrt_star->tree().size()));
 }
 
 void pubPathToControl(ros::Publisher* path_to_control_pub){
-  ROS_WARN("start_pt: %f, %f, %f", start_pt(0), start_pt(1), start_pt(2));
+  // ROS_WARN("start_pt: %f, %f, %f", start_pt(0), start_pt(1), start_pt(2));
   if(path_to_control_pub == NULL)
     return;
   nav_msgs::Path path_to_control_msg;
@@ -420,6 +438,7 @@ int main(int argc, char** argv)
   pose_pub = nh.advertise<geometry_msgs::PoseStamped>("robotPose", 40);
   path_to_control = nh.advertise<nav_msgs::Path>("path_to_control", 40);
   traj_jerk_vis_pub = nh.advertise<nav_msgs::Path>("trajectory_path", 40);
+  cloud_registered_pub = nh.advertise<sensor_msgs::PointCloud2>("cloud_registered_surround", 100);
 
   nh.param("map/resolution", resolution, 0.1);
 

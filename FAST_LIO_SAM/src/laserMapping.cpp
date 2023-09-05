@@ -1893,7 +1893,10 @@ bool saveMapService(fast_lio_sam::save_mapRequest& req, fast_lio_sam::save_mapRe
             // pass.filter(*surfCloudTemp);
             // *globalSurfCloud += *surfCloudTemp;
             // if(i == 0 && (cloudKeyPoses6D->points[i] - cloudKeyPoses6D->points[i-1]).norm() < 0.3) continue;
-            *globalSurfCloud   += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
+            Vector3d tempVector = {cloudKeyPoses6D->points[i].x, cloudKeyPoses6D->points[i].y, cloudKeyPoses6D->points[i].z};
+            Vector3d tempVector2 = {filter_thisPose6D.x, filter_thisPose6D.y, filter_thisPose6D.z};
+            if((tempVector - tempVector2).norm() < 10.0)
+                *globalSurfCloud   += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
             // cout << "\r" << std::flush << "Processing feature cloud " << i << " of " << cloudKeyPoses6D->size() << " ...";
       }
 
@@ -2306,6 +2309,14 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "laserMapping");
     ros::NodeHandle nh;
 
+    ROS_INFO("\033[1;32m----> Feature Extraction Started.\033[0m");
+
+    ROS_INFO("\033[1;32m----> Map Optimization Started.\033[0m");
+
+    ROS_INFO("\033[1;32m----> Loop Clousure Started.\033[0m");
+
+    ROS_INFO("\033[1;32m----> OAC Planner Started.\033[0m");
+
     nh.param<bool>("publish/path_en", path_en, true);  // 是否发布轨迹
     nh.param<bool>("publish/scan_publish_en", scan_pub_en, true); // 是否发布scan
     nh.param<bool>("publish/dense_publish_en", dense_pub_en, true); // 是否发布稠密点云
@@ -2489,7 +2500,7 @@ int main(int argc, char **argv)
 
     // 回环检测线程
     std::thread loopthread(&loopClosureThread);
-    std::thread thread_pubTotalPoint(&pubTotalPoint, pubLivoxTotalPoint);
+    std::thread thread_pubTotalPoint(&saveMap);
 
     #pragma region 主循环
     signal(SIGINT, SigHandle);
@@ -2646,7 +2657,7 @@ int main(int argc, char **argv)
                 publish_frame_body(pubLaserCloudFull_body);         //  发布imu系下的点云
 
 
-            // if(savePCD)  saveMap();
+            if(savePCD)  saveMap();
 
             // publish_effect_world(pubLaserCloudEffect);
             // publish_map(pubLaserCloudMap);

@@ -9,6 +9,7 @@ Panels:
         - /Marker1/Namespaces1
         - /PointCloud21/Autocompute Value Bounds1
         - /Pose1
+        - /PointCloud22
       Splitter Ratio: 0.4197002053260803
     Tree Height: 267
   - Class: rviz/Selection
@@ -25,7 +26,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: AllMap
+    SyncSource: PointCloud2
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -45,8 +46,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 3.087286949157715
-        Min Value: -3.112713098526001
+        Max Value: 1.9940416812896729
+        Min Value: -2.1059584617614746
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -243,6 +244,34 @@ Visualization Manager:
       Topic: /global_planning_node/trajectory_path
       Unreliable: false
       Value: false
+    - Alpha: 0.00800000037997961
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: z
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 1e+10
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 4
+      Size (m): 0.05000000074505806
+      Style: Flat Squares
+      Topic: /global_planning_node/cloud_registered_surround
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -260,20 +289,26 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: 0.6049998998641968
-      Class: rviz/TopDownOrtho
+      Class: rviz/Orbit
+      Distance: 38.60457992553711
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: 7.750572204589844
+        Y: 5.707965850830078
+        Z: -14.646224021911621
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 35.22711944580078
+      Pitch: 1.2047967910766602
       Target Frame: body
-      X: 0.6257906556129456
-      Y: -0.5921257138252258
+      Yaw: 3.773193120956421
     Saved:
       - Class: rviz/Orbit
         Distance: 79.24484252929688
