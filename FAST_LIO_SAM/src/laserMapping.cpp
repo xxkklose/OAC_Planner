@@ -240,6 +240,8 @@ ros::Publisher pubRecentKeyFrame;
 ros::Publisher pubCloudRegisteredRaw;
 ros::Publisher pubLoopConstraintEdge;
 
+ros::Publisher pubLaserCloudSurround2;
+
 bool aLoopIsClosed = false;
 map<int, int> loopIndexContainer; // from new to old
 vector<pair<int, int>> loopIndexQueue;
@@ -2024,6 +2026,32 @@ void publishGlobalMap()
     publishCloud(&pubLaserCloudSurround, globalMapKeyFramesDS, timeLaserInfoStamp, odometryFrame);
 }
 
+void publishLaserMap2()
+{
+
+      pcl::PointCloud<PointType>::Ptr globalSurfCloud(new pcl::PointCloud<PointType>());
+      pcl::PointCloud<PointType>::Ptr globalSurfCloudDS(new pcl::PointCloud<PointType>());
+      pcl::PointCloud<PointType>::Ptr globalMapCloud(new pcl::PointCloud<PointType>());
+
+      pcl::PassThrough<PointType> pass;
+      pass.setFilterFieldName("z");
+
+      for (int i = 0; i < (int)cloudKeyPoses6D->size(); i++) {
+            Vector3d tempVector = {cloudKeyPoses6D->points[i].x, cloudKeyPoses6D->points[i].y, cloudKeyPoses6D->points[i].z};
+            Vector3d tempVector2 = {filter_thisPose6D.x, filter_thisPose6D.y, filter_thisPose6D.z};
+            if((tempVector - tempVector2).norm() < 10.0)
+                *globalSurfCloud   += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
+      }
+
+    pass.setInputCloud(globalSurfCloud);
+    pass.setFilterLimits(-9999.0, msg_body_pose.pose.position.z + 2.0);
+    pass.filter(*globalSurfCloud);
+      // visial optimize global map on viz
+    ros::Time timeLaserInfoStamp = ros::Time().fromSec(lidar_end_time);
+    string odometryFrame = "camera_init";
+
+    publishCloud(&pubLaserCloudSurround2, globalSurfCloud, timeLaserInfoStamp, odometryFrame);
+}
 //构造H矩阵
 void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_data)
 {
@@ -2480,6 +2508,8 @@ int main(int argc, char **argv)
     pubLaserCloudSurround = nh.advertise<sensor_msgs::PointCloud2>("fast_lio_sam/mapping/keyframe_submap", 1); // 发布局部关键帧map的特征点云
     pubOptimizedGlobalMap = nh.advertise<sensor_msgs::PointCloud2>("fast_lio_sam/mapping/map_global_optimized", 1); // 发布局部关键帧map的特征点云
 
+    pubLaserCloudSurround2 = nh.advertise<sensor_msgs::PointCloud2>("fast_lio_sam/mapping/keyframe_submap2", 100000); // 发布局部关键帧map的特征点云
+
     // loop clousre
     // 发布闭环匹配关键帧局部map
     pubHistoryKeyFrames = nh.advertise<sensor_msgs::PointCloud2>("fast_lio_sam/mapping/icp_loop_closure_history_cloud", 1);
@@ -2500,7 +2530,7 @@ int main(int argc, char **argv)
 
     // 回环检测线程
     std::thread loopthread(&loopClosureThread);
-    std::thread thread_pubTotalPoint(&saveMap);
+    // std::thread thread_pubTotalPoint(&saveMap);
 
     #pragma region 主循环
     signal(SIGINT, SigHandle);
@@ -2649,6 +2679,7 @@ int main(int argc, char **argv)
                 if (jjj % 10 == 0)
                 {
                     publishGlobalMap();             //  发布局部点云特征地图
+                    publishLaserMap2();
                 }
             }
             if (scan_pub_en || pcd_save_en)
@@ -2735,7 +2766,7 @@ int main(int argc, char **argv)
 
     startFlag = false;
     loopthread.join(); //  分离线程
-    thread_pubTotalPoint.join();
+    // thread_pubTotalPoint.join();
 
     return 0;
 }

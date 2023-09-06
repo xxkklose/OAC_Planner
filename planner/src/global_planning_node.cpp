@@ -74,6 +74,7 @@ std::fstream file;
 
 // function declaration
 void rcvWaypointsCallback(const nav_msgs::Path& wp);
+void rcvPointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg);
 void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* _path_interpolation_pub);
 void findSolution();
 void callPlanner();
@@ -93,7 +94,6 @@ void rcvWaypointsCallback(const nav_msgs::Path& wp)
 
 void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
                     const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg) {
-  // std::cout << "receive point cloud: " << surfmap_msg->data.size() << std::endl;
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::fromROSMsg(*surfmap_msg, *cloud);
 
@@ -124,11 +124,11 @@ void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
   pass.setFilterFieldName("z");
   pass.setFilterLimits(-9999, start_pt(2) + 2.0);
   pass.filter(*cloud);
-  pcl::PointXYZ point;
-  point.x = start_pt(0);
-  point.y = start_pt(1);
-  point.z = start_pt(2);
-  cloud->points.push_back(point);
+  // pcl::PointXYZ point;
+  // point.x = start_pt(0);
+  // point.y = start_pt(1);
+  // point.z = start_pt(2);
+  // cloud->points.push_back(point);
 
   world->initGridMap(*cloud);
 
@@ -214,8 +214,8 @@ void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* path_int
  */
 void findSolution()
 {
-  // printf("=========================================================================\n");
-  // ROS_INFO("Start calling PF-RRT*");
+  printf("=========================================================================\n");
+  ROS_INFO("Start calling PF-RRT*");
   Path solution = Path();
 
   pf_rrt_star->initWithGoal(start_pt, target_pt);
@@ -230,7 +230,7 @@ void findSolution()
   //       global planning and try to generate a path
   else if (pf_rrt_star->state() == Global)
   {
-    // ROS_INFO("Starting PF-RRT* algorithm at the state of global planning");
+    ROS_INFO("Starting PF-RRT* algorithm at the state of global planning");
     int max_iter = 5000;
     double max_time = 100.0;
 
@@ -243,7 +243,7 @@ void findSolution()
     double dist_sum, temp_dist = 0.0;
     mj.waypoints.push_back(start_pt);
     Vector3d temp_pt = start_pt;
-    for (auto it = solution.nodes_.rbegin(); it != solution.nodes_.rend(); ++it) {
+    for (auto it = solution.nodes_.rbegin() + 1; it != solution.nodes_.rend(); ++it) {
       const auto &node = *it;
       temp_dist = (node->position_ - temp_pt).norm();
       if(temp_dist < 0.1) continue;
@@ -287,36 +287,39 @@ void findSolution()
 
     // visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
-    // if (!solution.nodes_.empty())
-      // ROS_INFO("Get a global path!");
-    // else
-      // ROS_WARN("No solution found!");
+    if (!solution.nodes_.empty())
+      ROS_INFO("Get a global path!");
+    else
+      ROS_WARN("No solution found!");
   }
   // Case3: If the origin can be projected while the target can not,the PF-RRT*
   //       will try to find a temporary target for transitions.
   else
   {
-    // ROS_INFO("Starting PF-RRT* algorithm at the state of rolling planning");
+    ROS_INFO("Starting PF-RRT* algorithm at the state of rolling planning");
     int max_iter = 1500;
     double max_time = 100.0;
 
     solution = pf_rrt_star->planner(max_iter, max_time);
-    // mj.waypoints.clear();
-    // double dist_sum, temp_dist = 0.0;
-    // mj.waypoints.push_back(start_pt);
-    // Vector3d temp_pt = start_pt;
-    // for (auto it = solution.nodes_.rbegin(); it != solution.nodes_.rend(); ++it) {
-    //   const auto &node = *it;
-    //   temp_dist = (node->position_ - temp_pt).norm();
-    //   dist_sum += temp_dist;
-    //   if(dist_sum > 5.0){
-    //     dist_sum = 0.0;
-    //     temp_dist = 0.0;
-    //     break;
-    //   }
-    //   temp_pt = node->position_;
-    //   mj.waypoints.push_back(node->position_);
-    // }
+    mj.waypoints.clear();
+    double dist_sum, temp_dist = 0.0;
+    mj.waypoints.push_back(start_pt);
+    Vector3d temp_pt = start_pt;
+    for (auto it = solution.nodes_.rbegin() + 1; it != solution.nodes_.rend(); ++it) {
+      const auto &node = *it;
+      temp_dist = (node->position_ - temp_pt).norm();
+      if(temp_dist < 0.1) continue;
+      double cos_theta = (node->position_ - start_pt).dot(node->position_ - target_pt);
+      if(cos_theta > 0 && cos_theta < 0.3) continue;
+      // dist_sum += temp_dist;
+      // if(dist_sum > 5.0){
+      //   dist_sum = 0.0;
+      //   temp_dist = 0.0;
+      //   break;
+      // }
+      temp_pt = node->position_;
+      mj.waypoints.push_back(node->position_);
+    }
 
     // Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
     // mj.getTimeVector(mj.waypoints,max_vel,max_acc); //TODO:max_vel, max_acc
@@ -325,13 +328,13 @@ void findSolution()
 
     // visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
-    // if (!solution.nodes_.empty())
-    //   ROS_INFO("Get a sub path!");
-    // else
-    //   ROS_WARN("No solution found!");
+    if (!solution.nodes_.empty())
+      ROS_INFO("Get a sub path!");
+    else
+      ROS_WARN("No solution found!");
   }
-  // // ROS_INFO("End calling PF-RRT*");
-  // printf("=========================================================================\n");
+  ROS_INFO("End calling PF-RRT*");
+  printf("=========================================================================\n");
 
   pubInterpolatedPath(solution.nodes_, &path_interpolation_pub);
   visPath(solution.nodes_, &path_vis_pub, start_pt);
@@ -345,7 +348,7 @@ void findSolution()
     has_goal = false;
     visOriginAndGoal({}, &goal_vis_pub);  // Passing an empty set to delete the previous display
     visPath({}, &path_vis_pub, start_pt);
-    // ROS_INFO("The Robot has achieved the goal!!!");
+    ROS_INFO("The Robot has achieved the goal!!!");
   }
 
   if (solution.type_ == Path::Empty)
@@ -363,11 +366,14 @@ void callPlanner()
     return;
 
   // The tree will expand at a certain frequency to explore the space more fully
+  /*
+    按照是否有目标点进行
+  */
   if (!has_goal && init_time_cost < 1000)
   {
     timeval start;
     gettimeofday(&start, NULL);
-    pf_rrt_star->initWithoutGoal(start_pt);
+    pf_rrt_star->initWithoutGoal(start_pt); //initWithoutGoal只在这里用到 把start_pt的平面生成了
     timeval end;
     gettimeofday(&end, NULL);
     init_time_cost = 1000 * (end.tv_sec - start.tv_sec) + 0.001 * (end.tv_usec - start.tv_usec);
@@ -442,11 +448,13 @@ int main(int argc, char** argv)
 
   nh.param("map/resolution", resolution, 0.1);
 
+  // 规划参数
   nh.param("planning/goal_thre", goal_thre, 1.0);
   nh.param("planning/step_size", step_size, 0.2);
   nh.param("planning/h_surf_car", h_surf_car, 0.1);
   nh.param("planning/neighbor_radius", neighbor_radius, 1.0);
 
+  // 平面拟合参数
   nh.param("planning/w_fit_plane", fit_plane_arg.w_total_, 0.4);
   nh.param("planning/w_flatness", fit_plane_arg.w_flatness_, 4000.0);
   nh.param("planning/w_slope", fit_plane_arg.w_slope_, 0.4);
@@ -455,16 +463,16 @@ int main(int argc, char** argv)
   nh.param("planning/ratio_max", fit_plane_arg.ratio_max_, 0.4);
   nh.param("planning/conv_thre", fit_plane_arg.conv_thre_, 0.1152);
 
-  nh.param("planning/radius_fit_plane", radius_fit_plane, 1.0);
+  nh.param("planning/radius_fit_plane", radius_fit_plane, 1.0); // 拟合平面半径
 
-  nh.param("planning/max_initial_time", max_initial_time, 1000.0);
+  nh.param("planning/max_initial_time", max_initial_time, 1000.0); // 最大初始化时间
 
   nh.param("planning/max_vel", max_vel, 0.3);
   nh.param("planning/max_acc", max_acc, 0.1);
 
   file.open("/home/beihang705/2.txt", std::ios::app);
 
-  // // Initialization
+  // Initialization
   world = new World(resolution);
   
   pf_rrt_star = new PFRRTStar(h_surf_car, world);
@@ -486,8 +494,6 @@ int main(int argc, char** argv)
   {
     timeval start;
     gettimeofday(&start, NULL);
-    tf::StampedTransform transform;
-    tf::TransformListener listener;
 
     // Execute the callback functions to update the grid map and check if there's a new goal
     ros::spinOnce();

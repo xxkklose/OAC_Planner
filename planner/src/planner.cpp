@@ -120,6 +120,7 @@ void PFRRTStar::initWithoutGoal(const Vector3d &start_pos)
     close_check_record_.clear();
     path_=Path();
 
+    // 把上一个状态的planning_state_保存下来
     PlanningState last_planning_state=planning_state_;
   
     Node* node_origin=fitPlane(start_pos);
@@ -135,6 +136,8 @@ void PFRRTStar::initWithoutGoal(const Vector3d &start_pos)
     delete node_target_;
     node_target_=NULL;
 
+    // If the last planning_state_ is Global or Roll, and the tree can be inherited, 
+    // then put the node_origin into the tree
     if(last_planning_state!=WithoutGoal || !inheritTree(node_origin))
     {
         clean_vector(tree_);
@@ -170,9 +173,13 @@ void PFRRTStar::addInvalidNodes(Node* &node_input,const bool &ifdelete,vector<No
     for(auto &node:node_input->children_) addInvalidNodes(node,delete_flag,invalid_nodes);
 }
 
+/*
+    @brief: This function is used to trim the tree 根据父子节点连线是否有碰撞以及子节点是否free来判断是否为无效点
+*/
 void PFRRTStar::trimTree()
 {
     vector<Node*> invalid_nodes;
+    // 将无效点添加到invalid_nodes中
     addInvalidNodes(node_origin_,false,invalid_nodes);
     for(auto &node:invalid_nodes)
     {
@@ -189,6 +196,11 @@ void PFRRTStar::trimTree()
     clean_vector(invalid_nodes);
 }
 
+/*
+    @brief: This function is used to inherit the tree from the member tree_
+    @param: new_root: the new root node
+    @return: bool: whether the tree is inherited successfully
+*/
 bool PFRRTStar::inheritTree(Node* new_root)
 { 
     bool result=false;
@@ -480,6 +492,14 @@ void PFRRTStar::fitPlane(Node* node)
     }
 }
 
+/*
+    * @brief: 遍历tree中的节点，如果小于neighbor_radius_并且他们之间连线相通，
+    * 计算他们之间的cost，以pair<Node*,float>的形式存储在record中
+    * @param: node1: the first node.
+    * @param: node2: the second node.
+    * @return: float: the EuclideanDistance between two nodes.
+*/
+
 void PFRRTStar::findNearNeighbors(Node* node_new,vector<pair<Node*,float>> &record) 
 { 
     for (const auto&node:tree_) 
@@ -488,6 +508,12 @@ void PFRRTStar::findNearNeighbors(Node* node_new,vector<pair<Node*,float>> &reco
             record.push_back( pair<Node*,float>(node,calCostBetweenTwoNode(node_new,node)) );
     }
 }
+
+/*
+    * @brief: 从邻居节点集合中找到cost最小的节点，将其作为新节点的父节点，并在其父节点的子节点集合中添加新节点
+    * @param: node_new: the new node.
+    * @param: record: the vector of pair<Node*,float>. neighbor_node vector
+*/
 
 void PFRRTStar::findParent(Node* node_new,const vector<pair<Node*,float>> &record) 
 {    
@@ -508,6 +534,13 @@ void PFRRTStar::findParent(Node* node_new,const vector<pair<Node*,float>> &recor
     node_parent->children_.push_back(node_new);
 }
 
+/*
+    * @brief: 从邻居节点集合中遍历节点，如果从node_new到该节点的cost更小，则将该节点的父节点设置为node_new，
+    * 并将该节点的子节点集合中的节点的cost更新，从该节点的父节点的子节点集合中删除该节点，将该节点添加到node_new的子节点集合中
+    * @param: node_new: the new node.
+    * @param: record: the vector of pair<Node*,float>. neighbor_node vector
+*/
+
 void PFRRTStar::reWire(Node* node_new,const vector<pair<Node*,float>> &record) 
 { 
     for (const auto&rec:record) 
@@ -521,7 +554,7 @@ void PFRRTStar::reWire(Node* node_new,const vector<pair<Node*,float>> &record)
             node->parent_=node_new;
             node->cost_=tmp_cost;
             node_new->children_.push_back(node);
-            updateChildrenCost(node,costdifference);
+            updateChildrenCost(node,costdifference); // 更新子节点的cost
         }
     }
 }
@@ -547,6 +580,11 @@ void PFRRTStar::updateChildrenCost(Node* &node_root, const float &costdifference
     }
 }
 
+/*
+    * @brief: This function is used to check whether the node is close to the target
+    * @param: node: the node to be checked
+    * @return: void
+*/
 void PFRRTStar::closeCheck(Node* node)
 {
     switch(planning_state_)
@@ -576,6 +614,9 @@ float PFRRTStar::calPathDis(const vector<Node*> &nodes)
     return dis;
 }
 
+/*
+    * @brief: 根据planning_state_，将路径点加入到path_中，计算path_的cost和dis
+*/
 void PFRRTStar::generatePath()
 {
     switch(planning_state_)
@@ -584,6 +625,7 @@ void PFRRTStar::generatePath()
         {
             Node* node_choosed=NULL;
             float min_cost=path_.cost_;
+            // 首先遍历close_check_record_，找到cost最小的节点，将其选中
             for (const auto&rec:close_check_record_) 
             {
                 Node* node=rec.first;
@@ -594,7 +636,7 @@ void PFRRTStar::generatePath()
                     node_choosed=node;
                 }
             }
-            if(min_cost!=path_.cost_)
+            if(min_cost<path_.cost_)
             {
                 path_.nodes_.clear();
                 path_.nodes_.push_back(node_target_);
@@ -624,7 +666,7 @@ void PFRRTStar::generatePath()
                     sub_goal = node;
                 }
             }
-            if(sub_goal!=NULL)
+            if(sub_goal!=NULL) // 找到了次优点
             {
                 while(sub_goal!=NULL)
                 {
@@ -635,7 +677,7 @@ void PFRRTStar::generatePath()
                 path_.dis_=calPathDis(path_.nodes_);
                 path_.type_=Path::Sub;
             }
-            else
+            else // 没有次优点,更新sub_goal_threshold_
             {
                 //If close_check_record is empty,adjust the threshold according to the current information of distance
                 //so that next time it will more likely to get a solution
@@ -653,7 +695,17 @@ void PFRRTStar::generatePath()
         break;
     }
 }
-
+/*
+    * @brief: This function is used to get the path of the planner
+    * 根据三种状态，分别进行规划
+    *   1. Invalid: 无效状态，不进行规划,返回Path为空
+    *   2. WithoutGoal: 无目标规划，随机生成树，不生成路径
+    *   3. Global: 全局规划，规划到目标点，生成路径
+    *   4. Roll: 局部规划，规划到距离目标点的最近点，生成路径
+    * @param: max_iter: the maximum iteration of the planner
+    * @param: max_time: the maximum time consuming of the planner
+    * @return: path: the path of the planner
+*/
 Path PFRRTStar::planner(const int &max_iter,const double &max_time)
 {
     if(planning_state_==Invalid)
@@ -661,8 +713,8 @@ Path PFRRTStar::planner(const int &max_iter,const double &max_time)
         ROS_ERROR("Illegal operation:the planner is at an invalid working state!!");
         return {};
     }
-    double time_now=curr_time_;
-    timeval start;gettimeofday(&start,NULL);
+    double time_now=curr_time_; //记录当前时间
+    timeval start;gettimeofday(&start,NULL); //记录规划开始时间
     while (curr_iter_ < max_iter && curr_time_ < max_time)
     {
         //Update current iteration
@@ -692,10 +744,10 @@ Path PFRRTStar::planner(const int &max_iter,const double &max_time)
         {
             //Get the set of the neighbors of the new node in the tree
             vector<pair<Node*,float>> neighbor_record;
-            findNearNeighbors(new_node,neighbor_record);
+            findNearNeighbors(new_node,neighbor_record); //找到new_node附近neighbor_radius_范围内的节点,并存在neighbor_record
 
             //Select an appropriate parent node for the new node from the set.
-            if(!neighbor_record.empty()) findParent(new_node,neighbor_record);
+            if(!neighbor_record.empty()) findParent(new_node,neighbor_record); //找到new_node的父节点
             //Different from other RRT algorithm,it is posible that the new node is too far away from the whole tree.If
             //so,discard the new node.
             else
@@ -708,7 +760,7 @@ Path PFRRTStar::planner(const int &max_iter,const double &max_time)
             tree_.push_back(new_node);
 
             //Rewire the tree to optimize it
-            reWire(new_node,neighbor_record);
+            reWire(new_node,neighbor_record); // 加入node_new之后更新树中邻居节点集合中每个节点的cost
 
             //Check if the new node is close enough to the goal
             closeCheck(new_node);
