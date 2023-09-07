@@ -7,7 +7,7 @@ map:
 
 planning: 
   step_size: 0.6
-  h_surf_car: 0.5
+  h_surf_car: 0.65
 
   w_fit_plane: 1.0
   w_flatness: 1000.0

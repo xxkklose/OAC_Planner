@@ -124,11 +124,11 @@ void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
   pass.setFilterFieldName("z");
   pass.setFilterLimits(-9999, start_pt(2) + 2.0);
   pass.filter(*cloud);
-  // pcl::PointXYZ point;
-  // point.x = start_pt(0);
-  // point.y = start_pt(1);
-  // point.z = start_pt(2);
-  // cloud->points.push_back(point);
+  pcl::PointXYZ point;
+  point.x = start_pt(0);
+  point.y = start_pt(1);
+  point.z = start_pt(2);
+  cloud->points.push_back(point);
 
   world->initGridMap(*cloud);
 

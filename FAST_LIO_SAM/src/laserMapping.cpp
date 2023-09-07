@@ -1301,6 +1301,7 @@ double timediff_lidar_wrt_imu = 0.0;
 bool timediff_set_flg = false; // 标记是否已经进行了时间补偿
 void livox_pcl_cbk(const livox_ros_driver::CustomMsg::ConstPtr &msg)
 {
+    std::cout << "msg.point_num" << msg->point_num << std::endl;
     mtx_buffer.lock();
     double preprocess_start_time = omp_get_wtime();
     scan_count++;
@@ -1908,7 +1909,6 @@ bool saveMapService(fast_lio_sam::save_mapRequest& req, fast_lio_sam::save_mapRe
       if(req.resolution != 0)
       {
         // cout << "\n\nSave resolution: " << req.resolution << endl;
-
         // 降采样
         // downSizeFilterCorner.setInputCloud(globalCornerCloud);
         // downSizeFilterCorner.setLeafSize(req.resolution, req.resolution, req.resolution);
@@ -2039,7 +2039,7 @@ void publishLaserMap2()
       for (int i = 0; i < (int)cloudKeyPoses6D->size(); i++) {
             Vector3d tempVector = {cloudKeyPoses6D->points[i].x, cloudKeyPoses6D->points[i].y, cloudKeyPoses6D->points[i].z};
             Vector3d tempVector2 = {filter_thisPose6D.x, filter_thisPose6D.y, filter_thisPose6D.z};
-            if((tempVector - tempVector2).norm() < 10.0)
+            if((tempVector - tempVector2).norm() < 20.0)
                 *globalSurfCloud   += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
       }
 
