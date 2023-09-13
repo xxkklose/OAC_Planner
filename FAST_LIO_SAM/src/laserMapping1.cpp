@@ -306,9 +306,6 @@ bool gnss_inited = false ;                        //  是否完成gnss初始化
 shared_ptr<GnssProcess> p_gnss(new GnssProcess());
 GnssProcess gnss_data;
 ros::Publisher pubGnssPath ;
-ros::Publisher pubPath;
-ros::Publisher pubRobotPose;
-
 nav_msgs::Path gps_path ;
 vector<double>       extrinT_Gnss2Lidar(3, 0.0);
 vector<double>       extrinR_Gnss2Lidar(9, 0.0);
@@ -325,8 +322,6 @@ ros::ServiceServer srvSavePose;
 bool savePCD;               // 是否保存地图
 string savePCDDirectory;    // 保存路径
 
-bool isFirstKeyFrame = true;
-std::vector<PointTypePose> saveKeyFramPose;
 
 /**
  * 更新里程计轨迹
@@ -1306,6 +1301,7 @@ double timediff_lidar_wrt_imu = 0.0;
 bool timediff_set_flg = false; // 标记是否已经进行了时间补偿
 void livox_pcl_cbk(const livox_ros_driver::CustomMsg::ConstPtr &msg)
 {
+    std::cout << "msg.point_num" << msg->point_num << std::endl;
     mtx_buffer.lock();
     double preprocess_start_time = omp_get_wtime();
     scan_count++;
@@ -2030,13 +2026,6 @@ void publishGlobalMap()
     publishCloud(&pubLaserCloudSurround, globalMapKeyFramesDS, timeLaserInfoStamp, odometryFrame);
 }
 
-struct regionKeyFrame
-{
-    PointTypePose first;
-    bool fov[8] = {false,false,false,false,false,false,false,false};
-};
-
-
 void publishLaserMap2()
 {
 
@@ -2046,38 +2035,20 @@ void publishLaserMap2()
 
       pcl::PassThrough<PointType> pass;
       pass.setFilterFieldName("z");
-      std::vector<regionKeyFrame> regionVector;
-      regionKeyFrame rkf;
-      rkf.first = cloudKeyPoses6D->points[0];
-      rkf.fov[0] = true;
 
-      Vector3d lastVector = {filter_thisPose6D.x, filter_thisPose6D.y, filter_thisPose6D.z};
-
-    //   for(auto& pose6d:cloudKeyPoses6D->points){
-    //     Vector3d currVector = {cloudKeyPoses6D->points[i].x, cloudKeyPoses6D->points[i].y, cloudKeyPoses6D->points[i].z};
-        
-    //     if((currVector - lastVector).norm() < 2.0)
-    //     {
-            
-    //         pointVec.push_back()
-    //     }
-    //   }
-    int count = 0;
       for (int i = 0; i < (int)cloudKeyPoses6D->size(); i++) {
             Vector3d tempVector = {cloudKeyPoses6D->points[i].x, cloudKeyPoses6D->points[i].y, cloudKeyPoses6D->points[i].z};
             Vector3d tempVector2 = {filter_thisPose6D.x, filter_thisPose6D.y, filter_thisPose6D.z};
-            if((tempVector - tempVector2).norm() < 10.0 && count < 20)
-                count++;
+            if((tempVector - tempVector2).norm() < 20.0)
                 *globalSurfCloud   += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
       }
 
     pass.setInputCloud(globalSurfCloud);
-    pass.setFilterLimits(-9999.0, msg_body_pose.pose.position.z + 0.5);
+    pass.setFilterLimits(-9999.0, msg_body_pose.pose.position.z + 2.0);
     pass.filter(*globalSurfCloud);
       // visial optimize global map on viz
     ros::Time timeLaserInfoStamp = ros::Time().fromSec(lidar_end_time);
     string odometryFrame = "camera_init";
-    std::cout << "globalSurfCloud,size : " << globalSurfCloud->size() << "\n";
 
     publishCloud(&pubLaserCloudSurround2, globalSurfCloud, timeLaserInfoStamp, odometryFrame);
 }
@@ -2218,17 +2189,140 @@ bool isInsideSurround(const pcl::PointXYZ pi, const double& x, const double& y, 
 
 }
 
-int keyFrameCount = 0;
+void savePointCloud(const ros::Publisher &pubLivoxTotalPoint){
+    
+    int size = feats_undistort->points.size();
+    PointCloudXYZI::Ptr laserCloudWorld(
+        new PointCloudXYZI(size, 1));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZ>(size, 1));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud_downFilted(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud_passThroughed(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud_statisticalOutlierRemovaled(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointNormal> filtered_cloud_MovingLeastSquared;
+    // pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+    PointCloudXYZI::Ptr ikdmap(new PointCloudXYZI());
 
-void pubmap()
-{
-    while(ros::ok())
+    tf::TransformListener listener;
+    tf::StampedTransform transform;
+    while (true && ros::ok())
     {
-        publish_path(pubPath,pubRobotPose);        
-        if(keyFrameCount % 10 == 0) 
-            publishLaserMap2();
-        keyFrameCount++;
-        ros::Duration(0.1).sleep();
+      try
+      {
+        listener.lookupTransform("camera_init", "body", ros::Time(0), transform);  //查询变换
+        break;
+      }
+      catch (tf::TransformException& ex)
+      {
+        continue;
+      }
+    }
+    double z_threshold = transform.getOrigin().z();
+    double y_threshold = transform.getOrigin().y();
+    double x_threshold = transform.getOrigin().x();
+    for (int i = 0,j=0; i < size; i++)
+    {
+        // RGBpointBodyToWorld(&featsFromMap->points[i],
+        RGBpointBodyToWorld(&feats_undistort->points[i],
+                &laserCloudWorld->points[i]);
+        input_cloud->points[i].x = laserCloudWorld->points[i].x;
+        input_cloud->points[i].y = laserCloudWorld->points[i].y;
+        input_cloud->points[i].z = laserCloudWorld->points[i].z;
+    }
+
+   //展开ikdtree的方法
+
+    // ikdtree_vis.PCL_Storage.clear();
+    // ikdtree_vis.flatten(ikdtree.Root_Node, ikdtree_vis.PCL_Storage, NOT_RECORD);
+    // ikdmap->clear();
+    // ikdmap->points = ikdtree_vis.PCL_Storage;
+    // for (int i = 0,j=0; i < ikdmap->points.size(); i++)
+    // {
+    //     // RGBpointBodyToWorld(&feats_undistort->points[i],
+    //     //         &laserCloudWorld->points[i]);
+    //     input_cloud->points[i].x = ikdmap->points[i].x;
+    //     input_cloud->points[i].y = ikdmap->points[i].y;
+    //     input_cloud->points[i].z = ikdmap->points[i].z;
+    // }
+
+    // //saveMapService的方法
+    // pcl::PointCloud<pcl::PointXYZINormal>::Ptr globalSurfCloud(new pcl::PointCloud<pcl::PointXYZINormal>());
+    // pcl::PointCloud<pcl::PointXYZINormal>::Ptr globalSurfCloudDS(new pcl::PointCloud<pcl::PointXYZINormal>());
+    // pcl::PointCloud<pcl::PointXYZINormal>::Ptr globalMapCloud(new pcl::PointCloud<pcl::PointXYZINormal>());
+
+    // // 注意：拼接地图时，keyframe是lidar系，而fastlio更新后的存到的cloudKeyPoses6D 关键帧位姿是body系下的，需要把
+    // //cloudKeyPoses6D  转换为T_world_lidar 。 T_world_lidar = T_world_body * T_body_lidar , T_body_lidar 是外参
+    // for (int i = 0; i < (int)cloudKeyPoses6D->size(); i++) {
+    //     //   *globalCornerCloud += *transformPointCloud(cornerCloudKeyFrames[i],  &cloudKeyPoses6D->points[i]);
+    //     *globalSurfCloud   += *transformPointCloud(surfCloudKeyFrames[i],    &cloudKeyPoses6D->points[i]);
+    // }
+    // *globalMapCloud += *globalSurfCloud;
+    // for (int i = 0,j=0; i < size; i++)
+    // {
+    //     RGBpointBodyToWorld(&globalMapCloud->points[i],
+    //     // RGBpointBodyToWorld(&feats_undistort->points[i],
+    //             &laserCloudWorld->points[i]);
+    //     input_cloud->points[i].x = laserCloudWorld->points[i].x;
+    //     input_cloud->points[i].y = laserCloudWorld->points[i].y;
+    //     input_cloud->points[i].z = laserCloudWorld->points[i].z;
+    // }
+    // 第一次剔除
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;   //创建滤波器对象
+    sor.setInputCloud (input_cloud);                           //设置待滤波的点云
+    sor.setMeanK (50);                               //设置在进行统计时考虑的临近点个数
+    sor.setStddevMulThresh (1.0);                      //设置判断是否为离群点的阀值，用来倍乘标准差，也就是上面的std_mul
+    sor.filter (*filtered_cloud_statisticalOutlierRemovaled);                    //滤波结果存储到cloud_filtered
+    // 降采样
+    pcl::VoxelGrid<pcl::PointXYZ> downSizeFilter;
+    downSizeFilter.setLeafSize(0.1, 0.1, 0.1);
+    downSizeFilter.setInputCloud(filtered_cloud_statisticalOutlierRemovaled);
+    downSizeFilter.filter(*filtered_cloud_downFilted);
+
+    //z方向过滤
+    pcl::PassThrough<pcl::PointXYZ> pass;
+    pass.setInputCloud(input_cloud);
+    pass.setFilterFieldName("z");
+    pass.setFilterLimits(-999999999, z_threshold + 2);  
+    pass.filter(*filtered_cloud_passThroughed);
+
+
+    for(const pcl::PointXYZ pi:*filtered_cloud_passThroughed){
+        if(isInsideSurround(pi, x_threshold, y_threshold, z_threshold)) continue;
+        else{
+            pclnoi_wait_save->push_back(pi);
+        }
+    }
+
+    // pcl::MovingLeastSquares<pcl::PointXYZ,pcl::PointNormal> mls;
+ 
+    // //Step5：设置是否使用多项式拟合提高精度
+    // mls.setPolynomialFit(true);
+ 
+    // //Step6: 使用MLS进行平顺
+    // mls.setInputCloud(pclnoi_wait_save);
+    // mls.setPolynomialOrder(2);  //设置多项式的最高阶数为2阶？
+    // mls.setSearchMethod(tree);  
+    // mls.setSearchRadius(0.03);  //设置在进行Kdtree中K邻域，的查找半径
+ 
+    // mls.process(filtered_cloud_MovingLeastSquared);
+
+
+    sensor_msgs::PointCloud2 cloud_msg;
+    // 将pcl::PointCloud<pcl::PointXYZ>转换为sensor_msgs::PointCloud2
+    pcl::toROSMsg(*pclnoi_wait_save, cloud_msg);
+    // pcl::toROSMsg(*pcl_wait_save, cloud_msg);
+    // 填充PointCloud2消息的头部信息（frame_id、timestamp等）
+    cloud_msg.header.frame_id = "camera_init"; // 设置坐标系
+    cloud_msg.header.stamp = ros::Time::now(); // 设置时间戳
+    
+    pubLivoxTotalPoint.publish(cloud_msg);
+}
+
+void pubTotalPoint(const ros::Publisher &pubLivoxTotalPoint){
+    ros::Rate rate(10); //   频率
+    while (ros::ok())
+    {
+        rate.sleep();
+        savePointCloud(pubLivoxTotalPoint); 
     }
 }
 
@@ -2406,14 +2500,15 @@ int main(int argc, char **argv)
     ros::Publisher pubLaserCloudEffect = nh.advertise<sensor_msgs::PointCloud2>("/cloud_effected", 100000);         //  no used
     ros::Publisher pubLaserCloudMap = nh.advertise<sensor_msgs::PointCloud2>("/Laser_map", 100000);                    //  no used
     ros::Publisher pubOdomAftMapped = nh.advertise<nav_msgs::Odometry>("/Odometry", 100000);
-    pubPath = nh.advertise<nav_msgs::Path>("/path", 1e00000);
-    pubRobotPose = nh.advertise<geometry_msgs::PoseStamped>("global_planning_node/robot_pose", 100000);
+    ros::Publisher pubPath = nh.advertise<nav_msgs::Path>("/path", 1e00000);
+    ros::Publisher pubLivoxTotalPoint = nh.advertise<sensor_msgs::PointCloud2>("/livox_total_point", 10);
+    ros::Publisher pubRobotPose = nh.advertise<geometry_msgs::PoseStamped>("global_planning_node/robot_pose", 40);
     ros::Publisher pubPathUpdate = nh.advertise<nav_msgs::Path>("fast_lio_sam/path_update", 100000);                   //  isam更新后的path
     pubGnssPath = nh.advertise<nav_msgs::Path>("/gnss_path", 100000);
     pubLaserCloudSurround = nh.advertise<sensor_msgs::PointCloud2>("fast_lio_sam/mapping/keyframe_submap", 1); // 发布局部关键帧map的特征点云
     pubOptimizedGlobalMap = nh.advertise<sensor_msgs::PointCloud2>("fast_lio_sam/mapping/map_global_optimized", 1); // 发布局部关键帧map的特征点云
 
-    pubLaserCloudSurround2 = nh.advertise<sensor_msgs::PointCloud2>("fast_lio_sam/mapping/keyframe_submap2", 1); // 发布局部关键帧map的特征点云
+    pubLaserCloudSurround2 = nh.advertise<sensor_msgs::PointCloud2>("fast_lio_sam/mapping/keyframe_submap2", 100000); // 发布局部关键帧map的特征点云
 
     // loop clousre
     // 发布闭环匹配关键帧局部map
@@ -2435,7 +2530,7 @@ int main(int argc, char **argv)
 
     // 回环检测线程
     std::thread loopthread(&loopClosureThread);
-    // std::thread thread_pubTotalPoint(&pubmap);
+    // std::thread thread_pubTotalPoint(&saveMap);
 
     #pragma region 主循环
     signal(SIGINT, SigHandle);
@@ -2583,11 +2678,11 @@ int main(int argc, char **argv)
                 jjj++;
                 if (jjj % 10 == 0)
                 {
-                    // publishGlobalMap();             //  发布局部点云特征地图
-                    // publishLaserMap2();
+                    publishGlobalMap();             //  发布局部点云特征地图
+                    publishLaserMap2();
                 }
             }
-            // if (scan_pub_en || pcd_save_en)
+            if (scan_pub_en || pcd_save_en)
                 publish_frame_world(pubLaserCloudFull);        //   发布world系下的点云
             if (scan_pub_en && scan_body_pub_en)
                 publish_frame_body(pubLaserCloudFull_body);         //  发布imu系下的点云

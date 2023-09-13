@@ -5,6 +5,10 @@
  */
 
 #include "planner_classes.h"
+#include <execution>
+#include <algorithm>
+#include <iostream>
+#include <chrono>
 
 using namespace std;
 using namespace Eigen;
@@ -148,18 +152,18 @@ void World::clearMap()
             {
                 delete[] grid_map_[i][j];
                 grid_map_[i][j]=NULL;
-                delete[] grid_map_count_[i][j];
-                grid_map_count_[i][j]=NULL;
+                // delete[] grid_map_count_[i][j];
+                // grid_map_count_[i][j]=NULL;
             }
             delete[] grid_map_[i];
             grid_map_[i]=NULL;
-            delete[] grid_map_count_[i];
-            grid_map_count_[i]=NULL;
+            // delete[] grid_map_count_[i];
+            // grid_map_count_[i]=NULL;
         }
         delete[] grid_map_;
         grid_map_=NULL;
-        delete[] grid_map_count_;
-        grid_map_count_=NULL;
+        // delete[] grid_map_count_;
+        // grid_map_count_=NULL;
     }
 }
 
@@ -170,17 +174,17 @@ void World::initGridMap(const Vector3d &lowerbound,const Vector3d &upperbound)
     upperbound_=upperbound;
     idx_count_=((upperbound_-lowerbound_)/resolution_).cast<int>()+Eigen::Vector3i::Ones();
     grid_map_=new bool**[idx_count_(0)];
-    grid_map_count_=new int**[idx_count_(0)];
+    // grid_map_count_=new int**[idx_count_(0)];
     for(int i = 0 ; i < idx_count_(0) ; i++)
     {
         grid_map_[i]=new bool*[idx_count_(1)];
-        grid_map_count_[i]=new int*[idx_count_(1)];
+        // grid_map_count_[i]=new int*[idx_count_(1)];
         for(int j = 0 ; j < idx_count_(1) ; j++)
         {
             grid_map_[i][j]=new bool[idx_count_(2)];
-            grid_map_count_[i][j]=new int[idx_count_(2)];
+            // grid_map_count_[i][j]=new int[idx_count_(2)];
             memset(grid_map_[i][j],true,idx_count_(2)*sizeof(bool));
-            memset(grid_map_count_[i][j],0,idx_count_(2)*sizeof(int));
+            // memset(grid_map_count_[i][j],0,idx_count_(2)*sizeof(int));
         }
     }
     has_map_=true;
@@ -194,7 +198,7 @@ void World::initGridMap(const pcl::PointCloud<pcl::PointXYZ> &cloud)
         return;
     }
     clearMap();
-
+    auto start_tiem = std::chrono::steady_clock::now();
     for(const auto&pt:cloud.points)
     {
         if(pt.x < lowerbound_(0)) lowerbound_(0)=pt.x;
@@ -204,23 +208,40 @@ void World::initGridMap(const pcl::PointCloud<pcl::PointXYZ> &cloud)
         if(pt.y > upperbound_(1)) upperbound_(1)=pt.y;
         if(pt.z + 1.0 > upperbound_(2)) upperbound_(2)=pt.z+1.0;
     }
+    auto end_time1 = std::chrono::steady_clock::now();
+    // std::for_each(std::execution::par, cloud.begin(), cloud.end(), [&](const auto& pt) {
+    //     if (pt.x() < lowerbound_(0)) lowerbound_(0) = pt.x();
+    //     if (pt.y() < lowerbound_(1)) lowerbound_(1) = pt.y();
+    //     if (pt.z() < lowerbound_(2)) lowerbound_(2) = pt.z();
+    //     if (pt.x() > upperbound_(0)) upperbound_(0) = pt.x();
+    //     if (pt.y() > upperbound_(1)) upperbound_(1) = pt.y();
+    //     if (pt.z() + 1.0 > upperbound_(2)) upperbound_(2) = pt.z() + 1.0;
+    // });
 
     idx_count_ = ((upperbound_-lowerbound_)/resolution_).cast<int>() + Eigen::Vector3i::Ones();
 
     grid_map_=new bool**[idx_count_(0)];
-    grid_map_count_=new int**[idx_count_(0)];
+    // grid_map_count_=new int**[idx_count_(0)];
     for(int i = 0 ; i < idx_count_(0) ; i++)
     {
         grid_map_[i]=new bool*[idx_count_(1)];
-        grid_map_count_[i]=new int*[idx_count_(1)];
+        // grid_map_count_[i]=new int*[idx_count_(1)];
         for(int j = 0 ; j < idx_count_(1) ; j++)
         {
             grid_map_[i][j]=new bool[idx_count_(2)];
-            grid_map_count_[i][j]=new int[idx_count_(2)];
+            // grid_map_count_[i][j]=new int[idx_count_(2)];
             memset(grid_map_[i][j],true,idx_count_(2)*sizeof(bool));
-            memset(grid_map_count_[i][j],0,idx_count_(2)*sizeof(int));
+            // memset(grid_map_count_[i][j],0,idx_count_(2)*sizeof(int));
         }
     }
+    auto end_time2 = std::chrono::steady_clock::now();
+    // std::for_each(std::execution::par, grid_map_.begin(), grid_map_.end(), [](std::vector<std::vector<bool>>& row) {
+    //     std::for_each(std::execution::par, row.begin(), row.end(), [](std::vector<bool>& column) {
+    //         std::fill(std::execution::par, column.begin(), column.end(), true);
+    //     });
+    // });
+    ROS_WARN("TimeIn1: %f", std::chrono::duration_cast<std::chrono::duration<double>>(end_time1 - start_tiem).count());
+    ROS_WARN("TimeIn2: %f", std::chrono::duration_cast<std::chrono::duration<double>>(end_time2 - end_time1).count());
     has_map_=true;
 }
  
@@ -256,12 +277,15 @@ bool World::collisionFree(const Node* node_start,const Node* node_end)
                            e_x(2),e_y(2),e_z(2);
 
         Vector3d check_point;
-        for(int y=-2; y <= 2; y++)
+        for(int y=-3; y <= 3; y++)
         {
             for(int z=-2; z<=2; z++)
             {
-                check_point=check_center+rotation_matrix*Vector3d(0,0.2*y,0.1*z);
-                if(!isFree(check_point)) return false;
+                for(int x=-3; x<=3; x++)
+                {
+                    check_point=check_center+rotation_matrix*Vector3d(-0.4+0.2*x,0.2*y,0.1*z);
+                    if(!isFree(check_point)) return false;
+                }
             }
         }
     }
@@ -271,7 +295,7 @@ bool World::collisionFree(const Node* node_start,const Node* node_end)
 void World::setObs(const Vector3d &point)
 {   
     Vector3i idx=coord2index(point);
-    grid_map_count_[idx(0)][idx(1)][idx(2)]++;
+    // grid_map_count_[idx(0)][idx(1)][idx(2)]++;
     // if(grid_map_count_[idx(0)][idx(1)][idx(2)] >= 3){
     //     grid_map_[idx(0)][idx(1)][idx(2)]=false;
     // }

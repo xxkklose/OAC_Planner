@@ -14,7 +14,7 @@
   <node pkg="planner" type="global_planning_node" name="global_planning_node" output="screen" required = "true">
       <remap from="~waypoints"       to="/waypoint_generator/waypoints"/>
       <!-- <remap from="~map"             to="/fast_lio_sam/mapping/map_global_optimized"/>  -->
-      <remap from="~map"             to="/fast_lio_sam/mapping/keyframe_submap2"/> 
+      <remap from="~map"             to="/cloud_registered"/> 
 
       <rosparam command="load" file="$(find planner)/config/for_simulation/map1.yaml"/>
   </node>

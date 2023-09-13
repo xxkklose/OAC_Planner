@@ -197,7 +197,7 @@ public:
     }
 //protected:
     bool ***grid_map_=NULL;
-    int ***grid_map_count_=NULL;
+    // int ***grid_map_count_=NULL;
 
     float resolution_;
 

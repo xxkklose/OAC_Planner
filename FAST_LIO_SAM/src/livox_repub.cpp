@@ -8,12 +8,13 @@ std::vector<livox_ros_driver::CustomMsgConstPtr> livox_data;
 void multi_callback(const livox_ros_driver::CustomMsgConstPtr& livox_msg_1,
                     const livox_ros_driver::CustomMsgConstPtr& livox_msg_2) {
 // void LivoxMsgCbk1(const livox_ros_driver::CustomMsgConstPtr& livox_msg_in) {
-  std::cout << "livox_msg_1  stamp:" << livox_msg_1->header.stamp << "\n";
-  std::cout << "livox_msg_2  stamp:" << livox_msg_2->header.stamp << "\n";
+  // std::cout << "livox_msg_1  stamp:" << livox_msg_1->header.stamp << "\n";
+  // std::cout << "livox_msg_2  stamp:" << livox_msg_2->header.stamp << "\n";
   auto timediff = livox_msg_1->timebase - livox_msg_2->timebase;
 
   livox_ros_driver::CustomMsg livox_msg;
   livox_msg.header = livox_msg_1->header;
+  livox_msg.header.frame_id = "camera_init";
   livox_msg.timebase = livox_msg_1->timebase;
   livox_msg.point_num = livox_msg_1->point_num + livox_msg_2->point_num;
   // livox_msg.point_num = livox_msg_1->point_num;
@@ -34,7 +35,7 @@ void multi_callback(const livox_ros_driver::CustomMsgConstPtr& livox_msg_1,
     livox_msg.points.push_back(livox_msg_1->points[i]);
   }
   
-std::cout << "livox_msg.points" << livox_msg.points.size() << "\n";
+// std::cout << "livox_msg.points" << livox_msg.points.size() << "\n";
 
 //   livox_data.push_back(livox_msg_1);
 //   livox_data.push_back(livox_msg_2);

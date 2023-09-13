@@ -46,8 +46,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 1.9940416812896729
-        Min Value: -2.1059584617614746
+        Max Value: 1.9691442251205444
+        Min Value: -2.530855894088745
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -244,14 +244,14 @@ Visualization Manager:
       Topic: /global_planning_node/trajectory_path
       Unreliable: false
       Value: false
-    - Alpha: 0.00800000037997961
+    - Alpha: 0.004999999888241291
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
         Max Value: 10
         Min Value: -10
         Value: true
       Axis: Z
-      Channel Name: z
+      Channel Name: curvature
       Class: rviz/PointCloud2
       Color: 255; 255; 255
       Color Transformer: Intensity
@@ -264,13 +264,21 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 4
+      Size (Pixels): 2
       Size (m): 0.05000000074505806
-      Style: Flat Squares
+      Style: Points
       Topic: /global_planning_node/cloud_registered_surround
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /global_planning_node/visualization_marker_box
+      Name: MarkerArray
+      Namespaces:
+        rectangle: true
+      Queue Size: 100
       Value: true
   Enabled: true
   Global Options:
@@ -289,26 +297,20 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz/Orbit
-      Distance: 38.60457992553711
+      Angle: 0
+      Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Field of View: 0.7853981852531433
-      Focal Point:
-        X: 7.750572204589844
-        Y: 5.707965850830078
-        Z: -14.646224021911621
-      Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2047967910766602
+      Scale: 40.582401275634766
       Target Frame: body
-      Yaw: 3.773193120956421
+      X: 2.0384504795074463
+      Y: 0.39466869831085205
     Saved:
       - Class: rviz/Orbit
         Distance: 79.24484252929688

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
-# project(planner LANGUAGES CXX CUDA)
-project(planner LANGUAGES CXX)
+project(planner LANGUAGES CXX CUDA)
+# project(planner LANGUAGES CXX)
 
 if(CUDA_ENABLED)
   enable_language(CUDA)
@@ -8,7 +8,7 @@ endif()
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
-set(CMAKE_CXX_FLAGS "-std=c++14 ${CMAKE_CXX_FLAGS} -O3 -Wall") # -Wextra -Werror
+set(CMAKE_CXX_FLAGS "-std=c++17 ${CMAKE_CXX_FLAGS} -O3 -Wall") # -Wextra -Werror
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -22,6 +22,8 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 )
 find_package(PCL REQUIRED)
+find_package(TBB REQUIRED)
+message(STATUS "TBB_INCLUDE_DIRS: ${TBB_INCLUDE_DIRS}")
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -126,6 +128,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS} 
   ${PCL_INCLUDE_DIRS}
+  ${TBB_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -149,10 +152,13 @@ add_executable(global_planning_node
     src/planner_vis.cpp
     )
 
-target_link_libraries(global_planning_node 
+target_link_libraries(global_planning_node PUBLIC 
     ${catkin_LIBRARIES}
     ${PCL_LIBRARIES} 
+    # ${TBB_LIBRARIES}
+    TBB::tbb
 )
+# target_compile_features(ParallelAlgorithmExample PRIVATE cxx_std_17)
 
 add_executable(local_obs_node
     src/local_obs.cpp

@@ -2,6 +2,7 @@
 #include "planner.h"
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 #include <nav_msgs/Path.h>
 #include <std_msgs/Float32MultiArray.h>
 #include <message_filters/subscriber.h>
@@ -9,9 +10,14 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
 #include <pcl/filters/passthrough.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 #include <queue>
 #include <fstream>
 #include <thread>
+#include <mutex>
+#include <chrono>
+#include <execution>  
+#include <algorithm>  
 
 using namespace std;
 using namespace std_msgs;
@@ -41,10 +47,21 @@ ros::Publisher traj_jerk_vis_pub;
 ros::Publisher pose_pub;
 ros::Publisher path_to_control;
 ros::Publisher cloud_registered_pub;
+ros::Publisher marker_pub_box;
+
+std::mutex dataMutex;
+using PointT = pcl::PointXYZ;
+using PointCloud = pcl::PointCloud<PointT>;
 
 //动态保存点云地图
 std::queue<pcl::PointCloud<pcl::PointXYZ>> pointcloud_map_queue;
 const int queue_size = 20;
+std::queue<std::pair<PointCloud, Vector3d>> pointcloud_vector3d_queue;
+const int queue2_size = 10; //如果卡顿修改他
+Vector3d last_point = {0,0,0};
+pcl::PassThrough<pcl::PointXYZ> pass;
+pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+
 
 // indicate whether the robot has a moving goal
 bool has_goal = false;
@@ -60,8 +77,9 @@ FitPlaneArg fit_plane_arg;
 double neighbor_radius;
 
 // useful global variables
-Vector3d start_pt;
+Vector3d start_pt = {0,0,0};
 Vector3d target_pt;
+geometry_msgs::PoseStamped start_pose = geometry_msgs::PoseStamped();
 World* world = NULL;
 Minimum_jerk mj = Minimum_jerk();
 PFRRTStar* pf_rrt_star = NULL;
@@ -69,6 +87,7 @@ double max_vel;
 double max_acc;
 
 std::fstream file;
+double plane_bottom;
 
 //single thread for pose pub
 
@@ -79,6 +98,7 @@ void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* _path_in
 void findSolution();
 void callPlanner();
 void pubPathToControl(ros::Publisher* path_to_control_pub);
+void visualBox(const geometry_msgs::PoseStamped& pose);
 
 /**
  *@brief receive goal from rviz
@@ -92,13 +112,18 @@ void rcvWaypointsCallback(const nav_msgs::Path& wp)
   ROS_INFO("Receive the planning target");
 }
 
-void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
-                    const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg) {
+int cloud_count = 0;
+// void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
+//                     const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg) {
+void multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg) {
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::fromROSMsg(*surfmap_msg, *cloud);
+  // pcl::fromROSMsg(*surfmap_msg, *cloud);
+  // std::cout<<"cloud size: "<<cloud->size()<<std::endl;
+  std::cout << "callback " << "\n";
+  auto start_time = std::chrono::steady_clock::now();
 
   sensor_msgs::PointCloud2 msg;
-  msg = *surfmap_msg;
+  msg = *cloud_registered_msg;
   msg.header.stamp = ros::Time::now();
   cloud_registered_pub.publish(msg);
 
@@ -117,41 +142,102 @@ void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
     pointcloud_map_queue_copy.pop();
   }
 
+  if(pointcloud_map_queue.size() >= 20) 
+  {
+    if(last_point.norm() == 0 || (start_pt - last_point).norm() > 1.0)
+    {
+      {
+        std::pair<PointCloud, Vector3d> tempPair = std::make_pair(cloud_registered_queue, start_pt);
+        if(pointcloud_vector3d_queue.size() > queue2_size){
+          pointcloud_vector3d_queue.pop();
+        }
+        pointcloud_vector3d_queue.push(tempPair);
+        last_point = start_pt;
+      }
+    }
+    std::queue<std::pair<PointCloud, Vector3d>> pointcloud_vector3d_queue_copy = pointcloud_vector3d_queue;
+    PointCloud cloud_registered_vector3d_queue;
+    //遍历队列,将队列中的点云合并
+    while(!pointcloud_vector3d_queue_copy.empty()){
+      cloud_registered_vector3d_queue += pointcloud_vector3d_queue_copy.front().first;
+      pointcloud_vector3d_queue_copy.pop();
+    }
+    *cloud += cloud_registered_vector3d_queue;
+  }
   *cloud += cloud_registered_queue;
 
-  pcl::PassThrough<pcl::PointXYZ> pass;
+  std::cout<<"cloud_size: "<<cloud->size()<<"\n";
+
+  //转换坐标
+  Eigen::Vector3d translation(start_pose.pose.position.x, start_pose.pose.position.y, start_pose.pose.position.z);
+  Eigen::Quaterniond rotation(start_pose.pose.orientation.w, start_pose.pose.orientation.x,
+                              start_pose.pose.orientation.y, start_pose.pose.orientation.z);
+  Eigen::Matrix3d rotationMatrix = rotation.toRotationMatrix();
+  for(int i = -14; i <= 14 ; i++){
+    for(int j = -10; j <= 10; j++){
+      Vector3d plane = {i*0.05,j*0.05,plane_bottom};
+      Vector3d plane_transformed = rotationMatrix * plane + translation;
+      PointT point;
+      point.x = plane_transformed(0);
+      point.y = plane_transformed(1);
+      point.z = plane_transformed(2);
+      cloud->points.push_back(point);
+    }
+  }
+
   pass.setInputCloud(cloud);
   pass.setFilterFieldName("z");
   pass.setFilterLimits(-9999, start_pt(2) + 2.0);
   pass.filter(*cloud);
-  pcl::PointXYZ point;
-  point.x = start_pt(0);
-  point.y = start_pt(1);
-  point.z = start_pt(2);
-  cloud->points.push_back(point);
+
+	// sor.setInputCloud(cloud);//设置待滤波的点云
+	// sor.setMeanK(50);//设置在进行统计时考虑查询点邻居点数
+	// sor.setStddevMulThresh(1.0);//设置判断是否为离群点的阈值
+	// sor.filter(*cloud);//将滤波结果保存在cloud_filtered中
+	// sor.setNegative(true);
+
 
   world->initGridMap(*cloud);
+  auto end_time1 = std::chrono::steady_clock::now();
+  // for (const auto& pt : *cloud)
+  // {
+  //   Vector3d obstacle(pt.x, pt.y, pt.z);
+  //   // if(grid_map_count_[idx(0)][idx(1)][idx(2)] >= 1){
+  //   //     grid_map_[idx(0)][idx(1)][idx(2)]=false;
+  //   // }
+  //   world->setObs(obstacle);
+  // }
+  ROS_WARN("here1");
+  std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
+    Vector3d obstacle(pt.x, pt.y, pt.z);  
+    world->setObs(obstacle);  
+  });  
+  auto end_time2 = std::chrono::steady_clock::now();
+  // for (const auto& pt : *cloud)
+  // {
+  //   Vector3d obstacle(pt.x, pt.y, pt.z);
+  //   world->addObs(obstacle);
+  // }
+  ROS_WARN("here2");
+  std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
+    Vector3d obstacle(pt.x, pt.y, pt.z);  
+    world->addObs(obstacle);  
+  });  
+  ROS_WARN("here3");
 
-  for (const auto& pt : *cloud)
-  {
-    Vector3d obstacle(pt.x, pt.y, pt.z);
-    // if(grid_map_count_[idx(0)][idx(1)][idx(2)] >= 1){
-    //     grid_map_[idx(0)][idx(1)][idx(2)]=false;
-    // }
-    world->setObs(obstacle);
-  }
-  for (const auto& pt : *cloud)
-  {
-    Vector3d obstacle(pt.x, pt.y, pt.z);
-    world->addObs(obstacle);
-  }
+  auto time1 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time1 - start_time);
+  auto time2 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time2 - start_time);
+  ROS_WARN("time1: %f, time2: %f", time1.count(), time2.count());
+
   visWorld(world, &grid_map_vis_pub);
 }
 
 void rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
 {
+  dataMutex.lock();
   start_pt << pose.pose.position.x, pose.pose.position.y, pose.pose.position.z;
-
+  start_pose = pose;
+  dataMutex.unlock();
   // save vel_direction to minimum_jerk
   Eigen::Vector3d unit_vector = {1.0, 0.0, 0.0};
   Eigen::Quaterniond tmp_quaternion(pose.pose.orientation.w, 
@@ -172,6 +258,7 @@ void rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
   pose_to_control.header.stamp = ros::Time::now();
   pose_to_control.pose = pose.pose;
   pose_pub.publish(pose_to_control);
+  visualBox(pose_to_control);
 
   return;
 }
@@ -217,7 +304,7 @@ void findSolution()
   printf("=========================================================================\n");
   ROS_INFO("Start calling PF-RRT*");
   Path solution = Path();
-
+  ROS_WARN("findSolution to initWithGoal");
   pf_rrt_star->initWithGoal(start_pt, target_pt);
   // pf_rrt_star->initWithGoal(target_pt, start_pt);
 
@@ -228,8 +315,10 @@ void findSolution()
   }
   // Case2: If both the origin and the target can be projected,the PF-RRT* will execute
   //       global planning and try to generate a path
+  
   else if (pf_rrt_star->state() == Global)
   {
+    ROS_WARN("findSolution to planner global");
     ROS_INFO("Starting PF-RRT* algorithm at the state of global planning");
     int max_iter = 5000;
     double max_time = 100.0;
@@ -243,22 +332,30 @@ void findSolution()
     double dist_sum, temp_dist = 0.0;
     mj.waypoints.push_back(start_pt);
     Vector3d temp_pt = start_pt;
-    for (auto it = solution.nodes_.rbegin() + 1; it != solution.nodes_.rend(); ++it) {
-      const auto &node = *it;
-      temp_dist = (node->position_ - temp_pt).norm();
-      if(temp_dist < 0.1) continue;
-      double cos_theta = (node->position_ - start_pt).dot(node->position_ - target_pt);
-      if(cos_theta > 0 && cos_theta < 0.3) continue;
-      // dist_sum += temp_dist;
-      // if(dist_sum > 5.0){
-      //   dist_sum = 0.0;
-      //   temp_dist = 0.0;
-      //   break;
-      // }
-      temp_pt = node->position_;
-      mj.waypoints.push_back(node->position_);
+    ROS_WARN("solution.nodes_.size(): %d", solution.nodes_.size());
+    if(solution.nodes_.size() < 2){
+      if((start_pt-target_pt).norm() > 0.2) mj.waypoints.push_back(target_pt);
+    }else
+    {
+        for (auto it = solution.nodes_.rbegin() + 1; it != solution.nodes_.rend(); ++it) {
+        const auto &node = *it;
+        temp_dist = (node->position_ - temp_pt).norm();
+        if(temp_dist < 0.2) continue;
+        double cos_theta = (node->position_ - start_pt).dot(node->position_ - target_pt);
+        if(cos_theta > 0 && cos_theta < 0.3) continue;
+        // dist_sum += temp_dist;
+        // if(dist_sum > 5.0){
+        //   dist_sum = 0.0;
+        //   temp_dist = 0.0;
+        //   break;
+        // }
+        temp_pt = node->position_;
+        mj.waypoints.push_back(node->position_);
+      }
     }
-    Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
+    
+
+    // Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
     // mj.getTimeVector(0.3,0.1); //TODO:max_vel, max_acc
     // mj.solve_minimum_jerk(mj.start_vel, mj.start_acc, coefficientMatrix);
     // mj.solve_minimum_jerk({0,0,0}, {0,0,0}, coefficientMatrix); //暂时先用零向量代替
@@ -305,20 +402,25 @@ void findSolution()
     double dist_sum, temp_dist = 0.0;
     mj.waypoints.push_back(start_pt);
     Vector3d temp_pt = start_pt;
-    for (auto it = solution.nodes_.rbegin() + 1; it != solution.nodes_.rend(); ++it) {
-      const auto &node = *it;
-      temp_dist = (node->position_ - temp_pt).norm();
-      if(temp_dist < 0.1) continue;
-      double cos_theta = (node->position_ - start_pt).dot(node->position_ - target_pt);
-      if(cos_theta > 0 && cos_theta < 0.3) continue;
-      // dist_sum += temp_dist;
-      // if(dist_sum > 5.0){
-      //   dist_sum = 0.0;
-      //   temp_dist = 0.0;
-      //   break;
-      // }
-      temp_pt = node->position_;
-      mj.waypoints.push_back(node->position_);
+    if(solution.nodes_.size() < 2){
+      mj.waypoints.push_back(target_pt);
+    }else
+    {
+        for (auto it = solution.nodes_.rbegin() + 1; it != solution.nodes_.rend(); ++it) {
+        const auto &node = *it;
+        temp_dist = (node->position_ - temp_pt).norm();
+        if(temp_dist < 0.1) continue;
+        double cos_theta = (node->position_ - start_pt).dot(node->position_ - target_pt);
+        if(cos_theta > 0 && cos_theta < 0.3) continue;
+        // dist_sum += temp_dist;
+        // if(dist_sum > 5.0){
+        //   dist_sum = 0.0;
+        //   temp_dist = 0.0;
+        //   break;
+        // }
+        temp_pt = node->position_;
+        mj.waypoints.push_back(node->position_);
+      }
     }
 
     // Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
@@ -390,6 +492,7 @@ void callPlanner()
   // If there is a specified moving target,call PF-RRT* to find a solution
   else if (has_goal)
   {
+    ROS_WARN("callPlanner to findSolution");
     findSolution();
     init_time_cost = 0.0;
   }
@@ -418,21 +521,59 @@ void pubPathToControl(ros::Publisher* path_to_control_pub){
   path_to_control_pub->publish(path_to_control_msg);
 }
 
+void visualBox(const geometry_msgs::PoseStamped& pose){  
+        visualization_msgs::MarkerArray marker_array;
+
+        Eigen::Vector3d translation(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
+        Eigen::Quaterniond rotation(pose.pose.orientation.w, pose.pose.orientation.x,
+                                    pose.pose.orientation.y, pose.pose.orientation.z);
+        Eigen::Matrix3d rotationMatrix = rotation.toRotationMatrix();
+        Eigen::Vector3d original_vector(2,0,0);
+        Eigen::Vector3d transformed_vector = rotationMatrix * original_vector + translation;
+
+
+        // 创建矩形框
+        visualization_msgs::Marker rectangle_marker;
+        rectangle_marker.header.frame_id = pose.header.frame_id;
+        rectangle_marker.ns = "rectangle";
+        rectangle_marker.type = visualization_msgs::Marker::CUBE;
+        rectangle_marker.action = visualization_msgs::Marker::ADD;
+        rectangle_marker.scale.x = 0.01;  // 矩形框的长度
+        rectangle_marker.scale.y = 2.0;  // 矩形框的高度
+        rectangle_marker.scale.z = 1.0; // 矩形框的深度
+        rectangle_marker.pose = pose.pose;
+        rectangle_marker.pose.position.x = transformed_vector(0); 
+        rectangle_marker.pose.position.y = transformed_vector(1); 
+        rectangle_marker.pose.position.z = transformed_vector(2); 
+        rectangle_marker.color.r = 1.0;  // 颜色为红色
+        rectangle_marker.color.g = 0.0;
+        rectangle_marker.color.b = 0.0;
+        rectangle_marker.color.a = 1.0;  // 完全不透明
+
+        marker_array.markers.push_back(rectangle_marker);
+
+        marker_pub_box.publish(marker_array);
+}
+
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "global_planning_node");
   ros::NodeHandle nh("~");
 
+  map_sub = nh.subscribe("map", 1, multi_callback, ros::TransportHints().tcpNoDelay());
   wp_sub = nh.subscribe("waypoints", 1, rcvWaypointsCallback);
   pose_sub = nh.subscribe("/global_planning_node/robot_pose", 1, rcvPoseCallback);
 
-  message_filters::Subscriber<sensor_msgs::PointCloud2> surfmap_sub (nh, "map", 1000, ros::TransportHints().tcpNoDelay());
-  message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_registered_sub (nh, "/cloud_registered", 1000, ros::TransportHints().tcpNoDelay());
+  // message_filters::Subscriber<sensor_msgs::PointCloud2> surfmap_sub (nh, "map", 1000, ros::TransportHints().tcpNoDelay());
+  // message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_registered_sub (nh, "/cloud_registered", 1000, ros::TransportHints().tcpNoDelay());
 
-  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> syncPolicy;
-  message_filters::Synchronizer<syncPolicy> sync(syncPolicy(10), surfmap_sub, cloud_registered_sub);  
-  sync.registerCallback(boost::bind(&multi_callback, _1, _2));
-
+  // typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> syncPolicy;
+  // message_filters::Synchronizer<syncPolicy> sync(syncPolicy(10), surfmap_sub, cloud_registered_sub);  
+  // sync.registerCallback(boost::bind(&multi_callback, _1, _2));
+  // std::thread sync_thread([&](){
+  //   sync.registerCallback(boost::bind(&multi_callback, _1, _2));
+  //   ros::spin();
+  // });
 
   grid_map_vis_pub = nh.advertise<sensor_msgs::PointCloud2>("grid_map_vis", 1);
   path_vis_pub = nh.advertise<visualization_msgs::Marker>("path_vis", 40);
@@ -441,10 +582,11 @@ int main(int argc, char** argv)
   tree_vis_pub = nh.advertise<visualization_msgs::Marker>("tree_vis", 40);
   tree_tra_pub = nh.advertise<std_msgs::Float32MultiArray>("tree_tra", 40);
   path_interpolation_pub = nh.advertise<std_msgs::Float32MultiArray>("global_path", 1000);
-  pose_pub = nh.advertise<geometry_msgs::PoseStamped>("robotPose", 40);
-  path_to_control = nh.advertise<nav_msgs::Path>("path_to_control", 40);
+  pose_pub = nh.advertise<geometry_msgs::PoseStamped>("robotPose", 1000);
+  path_to_control = nh.advertise<nav_msgs::Path>("path_to_control", 1000);
   traj_jerk_vis_pub = nh.advertise<nav_msgs::Path>("trajectory_path", 40);
   cloud_registered_pub = nh.advertise<sensor_msgs::PointCloud2>("cloud_registered_surround", 100);
+  marker_pub_box = nh.advertise<visualization_msgs::MarkerArray>("visualization_marker_box", 10);
 
   nh.param("map/resolution", resolution, 0.1);
 
@@ -470,6 +612,8 @@ int main(int argc, char** argv)
   nh.param("planning/max_vel", max_vel, 0.3);
   nh.param("planning/max_acc", max_acc, 0.1);
 
+  nh.param("planning/plane_bottom", plane_bottom, 0.45);
+
   file.open("/home/beihang705/2.txt", std::ios::app);
 
   // Initialization
@@ -490,24 +634,36 @@ int main(int argc, char** argv)
 
   mj.traj_jerk_vis_pub_ = &traj_jerk_vis_pub;
   
+
+  // std::thread spinnerThread([&]() {
+
+  // });
+
+  // ros::MultiThreadedSpinner spinner(4);
+  // // ros::spin();
+  // spinner.spin();
+
+
+  
   while (ros::ok())
   {
-    timeval start;
-    gettimeofday(&start, NULL);
+    // timeval start;
+    // gettimeofday(&start, NULL);
 
     // Execute the callback functions to update the grid map and check if there's a new goal
     ros::spinOnce();
     // Call the PF-RRT* to work
     callPlanner();
-    double ms;
-    do
-    {
-      timeval end;
-      gettimeofday(&end, NULL);
-      ms = 1000 * (end.tv_sec - start.tv_sec) + 0.001 * (end.tv_usec - start.tv_usec);
-    } while (ms < 100);  // Cycle in 100ms
+    // double ms;
+    // do
+    // {
+    //   timeval end;
+    //   gettimeofday(&end, NULL);
+    //   ms = 1000 * (end.tv_sec - start.tv_sec) + 0.001 * (end.tv_usec - start.tv_usec);
+    // } while (ms < 100);  // Cycle in 100ms
   }
 
+  // spinnerThread.join();
   if(!ros::ok()){
     file.close();
   } 
