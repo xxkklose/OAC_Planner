@@ -83,6 +83,7 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/surface/mls.h>
 
 // gstam
@@ -241,6 +242,7 @@ ros::Publisher pubCloudRegisteredRaw;
 ros::Publisher pubLoopConstraintEdge;
 
 ros::Publisher pubLaserCloudSurround2;
+ros::Publisher pubLaserCloudFull;
 
 bool aLoopIsClosed = false;
 map<int, int> loopIndexContainer; // from new to old
@@ -327,6 +329,10 @@ string savePCDDirectory;    // 保存路径
 
 bool isFirstKeyFrame = true;
 std::vector<PointTypePose> saveKeyFramPose;
+
+// for radius removal
+double removalRidus;
+int removalNum;
 
 /**
  * 更新里程计轨迹
@@ -1586,17 +1592,40 @@ void publish_frame_world(const ros::Publisher &pubLaserCloudFull)         //    
     {
         PointCloudXYZI::Ptr laserCloudFullRes(dense_pub_en ? feats_undistort : feats_down_body);
         int size = laserCloudFullRes->points.size();
+        if(size == 0) return;
         PointCloudXYZI::Ptr laserCloudWorld(
             new PointCloudXYZI(size, 1));
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>(size,1));
 
         for (int i = 0; i < size; i++)
         {
             RGBpointBodyToWorld(&laserCloudFullRes->points[i],
                                 &laserCloudWorld->points[i]);
+            pcl::PointXYZ point;
+            point.x = laserCloudWorld->points[i].x; 
+            point.y = laserCloudWorld->points[i].y; 
+            point.z = laserCloudWorld->points[i].z;
+            cloud->push_back(point); 
         }
 
+        pcl::VoxelGrid<pcl::PointXYZ> down1;
+        down1.setInputCloud(cloud);
+        down1.setLeafSize(0.01f, 0.01f, 0.01f); // 体素大小为 1cm x 1cm x 1cm
+        down1.filter(*cloud);
+
+        pcl::RadiusOutlierRemoval<pcl::PointXYZ> sor;
+        
+        sor.setInputCloud(cloud);
+        sor.setRadiusSearch(removalRidus); // 设置半径
+        sor.setMinNeighborsInRadius(removalNum); // 设置点数阈值
+
+        // 执行滤波
+        // pcl::PointCloud<pcl::PointXYZ> filtered_cloud;
+        sor.filter(*cloud);
+
+
         sensor_msgs::PointCloud2 laserCloudmsg;
-        pcl::toROSMsg(*laserCloudWorld, laserCloudmsg);
+        pcl::toROSMsg(*cloud, laserCloudmsg);
         laserCloudmsg.header.stamp = ros::Time().fromSec(lidar_end_time);
         laserCloudmsg.header.frame_id = "camera_init";
         pubLaserCloudFull.publish(laserCloudmsg);
@@ -2224,10 +2253,12 @@ void pubmap()
 {
     while(ros::ok())
     {
-        publish_path(pubPath,pubRobotPose);        
-        if(keyFrameCount % 10 == 0) 
-            publishLaserMap2();
-        keyFrameCount++;
+        // publish_path(pubPath,pubRobotPose);        
+        publish_frame_world(pubLaserCloudFull);
+        
+        // if(keyFrameCount % 10 == 0) 
+        //     publishLaserMap2();
+        // keyFrameCount++;
         ros::Duration(0.1).sleep();
     }
 }
@@ -2333,6 +2364,9 @@ int main(int argc, char **argv)
     nh.param<bool>("savePCD", savePCD, false); // 是否保存pcd
     nh.param<std::string>("savePCDDirectory", savePCDDirectory, "/Downloads/LOAM/"); // 保存pcd路径
 
+    nh.param<double>("radius", removalRidus, 0.1);
+    nh.param<int>("pointnum", removalNum, 10);
+
     downSizeFilterCorner.setLeafSize(mappingCornerLeafSize, mappingCornerLeafSize, mappingCornerLeafSize);
     // downSizeFilterSurf.setLeafSize(mappingSurfLeafSize, mappingSurfLeafSize, mappingSurfLeafSize);
     downSizeFilterICP.setLeafSize(mappingSurfLeafSize, mappingSurfLeafSize, mappingSurfLeafSize);
@@ -2401,7 +2435,7 @@ int main(int argc, char **argv)
     /*** ROS subscribe initialization ***/
     ros::Subscriber sub_pcl = p_pre->lidar_type == AVIA ? nh.subscribe(lid_topic, 200000, livox_pcl_cbk) : nh.subscribe(lid_topic, 200000, standard_pcl_cbk);
     ros::Subscriber sub_imu = nh.subscribe(imu_topic, 200000, imu_cbk);
-    ros::Publisher pubLaserCloudFull = nh.advertise<sensor_msgs::PointCloud2>("/cloud_registered", 100000);        //  world系下稠密点云
+    pubLaserCloudFull = nh.advertise<sensor_msgs::PointCloud2>("/cloud_registered", 100000);        //  world系下稠密点云
     ros::Publisher pubLaserCloudFull_body = nh.advertise<sensor_msgs::PointCloud2>("/cloud_registered_body", 100000);      //  body系下稠密点云
     ros::Publisher pubLaserCloudEffect = nh.advertise<sensor_msgs::PointCloud2>("/cloud_effected", 100000);         //  no used
     ros::Publisher pubLaserCloudMap = nh.advertise<sensor_msgs::PointCloud2>("/Laser_map", 100000);                    //  no used
@@ -2435,7 +2469,7 @@ int main(int argc, char **argv)
 
     // 回环检测线程
     std::thread loopthread(&loopClosureThread);
-    // std::thread thread_pubTotalPoint(&pubmap);
+    std::thread thread_pubTotalPoint(&pubmap);
 
     #pragma region 主循环
     signal(SIGINT, SigHandle);
@@ -2588,7 +2622,7 @@ int main(int argc, char **argv)
                 }
             }
             // if (scan_pub_en || pcd_save_en)
-                publish_frame_world(pubLaserCloudFull);        //   发布world系下的点云
+                // publish_frame_world(pubLaserCloudFull);        //   发布world系下的点云
             if (scan_pub_en && scan_body_pub_en)
                 publish_frame_body(pubLaserCloudFull_body);         //  发布imu系下的点云
 
@@ -2671,7 +2705,7 @@ int main(int argc, char **argv)
 
     startFlag = false;
     loopthread.join(); //  分离线程
-    // thread_pubTotalPoint.join();
+    thread_pubTotalPoint.join();
 
     return 0;
 }

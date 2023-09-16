@@ -146,24 +146,19 @@ void World::clearMap()
 {
     if(has_map_)
     {
-        for(int i=0;i < idx_count_(0);i++)
-        {
-            for(int j=0;j < idx_count_(1);j++)
-            {
-                delete[] grid_map_[i][j];
-                grid_map_[i][j]=NULL;
-                // delete[] grid_map_count_[i][j];
-                // grid_map_count_[i][j]=NULL;
-            }
-            delete[] grid_map_[i];
-            grid_map_[i]=NULL;
-            // delete[] grid_map_count_[i];
-            // grid_map_count_[i]=NULL;
-        }
-        delete[] grid_map_;
-        grid_map_=NULL;
-        // delete[] grid_map_count_;
-        // grid_map_count_=NULL;
+        // for(int i=0;i < idx_count_(0);i++)
+        // {
+        //     for(int j=0;j < idx_count_(1);j++)
+        //     {
+        //         delete[] grid_map_[i][j];
+        //         grid_map_[i][j]=NULL;
+        //     }
+        //     delete[] grid_map_[i];
+        //     grid_map_[i]=NULL;
+        // }
+        // delete[] grid_map_;
+        // grid_map_=NULL;
+        grid_map_.clear();
     }
 }
 
@@ -173,20 +168,17 @@ void World::initGridMap(const Vector3d &lowerbound,const Vector3d &upperbound)
     lowerbound_=lowerbound;
     upperbound_=upperbound;
     idx_count_=((upperbound_-lowerbound_)/resolution_).cast<int>()+Eigen::Vector3i::Ones();
-    grid_map_=new bool**[idx_count_(0)];
-    // grid_map_count_=new int**[idx_count_(0)];
-    for(int i = 0 ; i < idx_count_(0) ; i++)
-    {
-        grid_map_[i]=new bool*[idx_count_(1)];
-        // grid_map_count_[i]=new int*[idx_count_(1)];
-        for(int j = 0 ; j < idx_count_(1) ; j++)
-        {
-            grid_map_[i][j]=new bool[idx_count_(2)];
-            // grid_map_count_[i][j]=new int[idx_count_(2)];
-            memset(grid_map_[i][j],true,idx_count_(2)*sizeof(bool));
-            // memset(grid_map_count_[i][j],0,idx_count_(2)*sizeof(int));
-        }
-    }
+    // grid_map_=new bool**[idx_count_(0)];
+    // for(int i = 0 ; i < idx_count_(0) ; i++)
+    // {
+    //     grid_map_[i]=new bool*[idx_count_(1)];
+    //     for(int j = 0 ; j < idx_count_(1) ; j++)
+    //     {
+    //         grid_map_[i][j]=new bool[idx_count_(2)];
+    //         memset(grid_map_[i][j],true,idx_count_(2)*sizeof(bool));
+    //     }
+    // }
+    grid_map_.resize(idx_count_(0), std::vector<std::vector<bool>>(idx_count_(1), std::vector<bool>(idx_count_(2), true)));
     has_map_=true;
 }
 
@@ -209,31 +201,15 @@ void World::initGridMap(const pcl::PointCloud<pcl::PointXYZ> &cloud)
         if(pt.z + 1.0 > upperbound_(2)) upperbound_(2)=pt.z+1.0;
     }
     auto end_time1 = std::chrono::steady_clock::now();
-    // std::for_each(std::execution::par, cloud.begin(), cloud.end(), [&](const auto& pt) {
-    //     if (pt.x() < lowerbound_(0)) lowerbound_(0) = pt.x();
-    //     if (pt.y() < lowerbound_(1)) lowerbound_(1) = pt.y();
-    //     if (pt.z() < lowerbound_(2)) lowerbound_(2) = pt.z();
-    //     if (pt.x() > upperbound_(0)) upperbound_(0) = pt.x();
-    //     if (pt.y() > upperbound_(1)) upperbound_(1) = pt.y();
-    //     if (pt.z() + 1.0 > upperbound_(2)) upperbound_(2) = pt.z() + 1.0;
-    // });
 
     idx_count_ = ((upperbound_-lowerbound_)/resolution_).cast<int>() + Eigen::Vector3i::Ones();
 
-    grid_map_=new bool**[idx_count_(0)];
-    // grid_map_count_=new int**[idx_count_(0)];
-    for(int i = 0 ; i < idx_count_(0) ; i++)
-    {
-        grid_map_[i]=new bool*[idx_count_(1)];
-        // grid_map_count_[i]=new int*[idx_count_(1)];
-        for(int j = 0 ; j < idx_count_(1) ; j++)
-        {
-            grid_map_[i][j]=new bool[idx_count_(2)];
-            // grid_map_count_[i][j]=new int[idx_count_(2)];
-            memset(grid_map_[i][j],true,idx_count_(2)*sizeof(bool));
-            // memset(grid_map_count_[i][j],0,idx_count_(2)*sizeof(int));
-        }
-    }
+    ROS_WARN("idx_count_(0): %d", idx_count_(0));
+    ROS_WARN("idx_count_(1): %d", idx_count_(1));
+    ROS_WARN("idx_count_(2): %d", idx_count_(2));
+    
+    grid_map_.resize(idx_count_(0), std::vector<std::vector<bool>>(idx_count_(1), std::vector<bool>(idx_count_(2), true)));
+
     auto end_time2 = std::chrono::steady_clock::now();
     // std::for_each(std::execution::par, grid_map_.begin(), grid_map_.end(), [](std::vector<std::vector<bool>>& row) {
     //     std::for_each(std::execution::par, row.begin(), row.end(), [](std::vector<bool>& column) {

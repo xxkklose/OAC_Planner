@@ -11,6 +11,7 @@
 #include <message_filters/synchronizer.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/filters/radius_outlier_removal.h>
 #include <queue>
 #include <fstream>
 #include <thread>
@@ -61,6 +62,7 @@ const int queue2_size = 10; //如果卡顿修改他
 Vector3d last_point = {0,0,0};
 pcl::PassThrough<pcl::PointXYZ> pass;
 pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+pcl::RadiusOutlierRemoval<pcl::PointXYZ> ror;
 
 
 // indicate whether the robot has a moving goal
@@ -192,13 +194,22 @@ void multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg
 
 	// sor.setInputCloud(cloud);//设置待滤波的点云
 	// sor.setMeanK(50);//设置在进行统计时考虑查询点邻居点数
-	// sor.setStddevMulThresh(1.0);//设置判断是否为离群点的阈值
+	// sor.setStddevMulThresh(2.0);//设置判断是否为离群点的阈值
 	// sor.filter(*cloud);//将滤波结果保存在cloud_filtered中
 	// sor.setNegative(true);
 
+  // ror.setInputCloud(cloud);
+  // ror.setRadiusSearch(0.1); // 设置半径
+  // ror.setMinNeighborsInRadius(10); // 设置点数阈值
+
+  // // 执行滤波
+  // ror.filter(*cloud);
+  auto end_time1 = std::chrono::steady_clock::now();
+
 
   world->initGridMap(*cloud);
-  auto end_time1 = std::chrono::steady_clock::now();
+  auto end_time2 = std::chrono::steady_clock::now();
+
   // for (const auto& pt : *cloud)
   // {
   //   Vector3d obstacle(pt.x, pt.y, pt.z);
@@ -207,23 +218,19 @@ void multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg
   //   // }
   //   world->setObs(obstacle);
   // }
-  ROS_WARN("here1");
   std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
     Vector3d obstacle(pt.x, pt.y, pt.z);  
     world->setObs(obstacle);  
   });  
-  auto end_time2 = std::chrono::steady_clock::now();
   // for (const auto& pt : *cloud)
   // {
   //   Vector3d obstacle(pt.x, pt.y, pt.z);
   //   world->addObs(obstacle);
   // }
-  ROS_WARN("here2");
   std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
     Vector3d obstacle(pt.x, pt.y, pt.z);  
     world->addObs(obstacle);  
   });  
-  ROS_WARN("here3");
 
   auto time1 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time1 - start_time);
   auto time2 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time2 - start_time);

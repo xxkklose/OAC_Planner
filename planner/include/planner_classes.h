@@ -196,8 +196,8 @@ public:
         return index;
     }
 //protected:
-    bool ***grid_map_=NULL;
-    // int ***grid_map_count_=NULL;
+    // bool ***grid_map_=NULL;
+    std::vector<std::vector<std::vector<bool>>> grid_map_;
 
     float resolution_;
 
