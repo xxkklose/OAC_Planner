@@ -154,7 +154,7 @@ void multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg
 
   if(pointcloud_map_queue.size() >= 20) 
   {
-    if(last_point.norm() == 0 || (start_pt - last_point).norm() > 1.0)
+    if(last_point.norm() == 0 || (start_pt - last_point).norm() > 0.5)
     {
       {
         std::pair<PointCloud, Vector3d> tempPair = std::make_pair(cloud_registered_queue, start_pt);

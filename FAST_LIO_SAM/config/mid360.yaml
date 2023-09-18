@@ -6,7 +6,7 @@ common:
 preprocess:
     lidar_type: 1                # 1 for Livox serials LiDAR, 2 for Velodyne LiDAR, 3 for ouster LiDAR, 
     scan_line: 6
-    blind: 0.2
+    blind: 0.1
 
 mapping:
     acc_cov: 0.1
@@ -84,5 +84,6 @@ savePCD: false                         # https://github.com/TixiaoShan/LIO-SAM/i
 savePCDDirectory: "/fast_lio_sam_ws/src/FAST_LIO_SAM/PCD/"        # in your home folder, starts and ends with "/". Warning: the code deletes "LOAM" folder then recreates it. See "mapOptimization" for implementation
 
 # Radius removal
-radius : 0.8
+radius : 0.5
 pointnum: 10
+cloud_registed_downsize: 0.1

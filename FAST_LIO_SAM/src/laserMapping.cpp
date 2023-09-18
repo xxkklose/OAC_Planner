@@ -330,6 +330,7 @@ std::vector<PointTypePose> saveKeyFramPose;
 // for radius removal
 double removalRidus;
 int removalNum;
+double cloud_registed_downsize;
 
 /**
  * 更新里程计轨迹
@@ -1600,7 +1601,7 @@ void publish_frame_world(const ros::Publisher &pubLaserCloudFull)         //    
 
         pcl::VoxelGrid<pcl::PointXYZ> down1;
         down1.setInputCloud(cloud);
-        down1.setLeafSize(0.01f, 0.01f, 0.01f); // 体素大小为 1cm x 1cm x 1cm
+        down1.setLeafSize(cloud_registed_downsize, cloud_registed_downsize, cloud_registed_downsize); // 体素大小为 1cm x 1cm x 1cm
         down1.filter(*cloud);
 
         pcl::RadiusOutlierRemoval<pcl::PointXYZ> sor;
@@ -2354,6 +2355,7 @@ int main(int argc, char **argv)
 
     nh.param<double>("radius", removalRidus, 0.1);
     nh.param<int>("pointnum", removalNum, 10);
+    nh.param<double>("cloud_registed_downsize", cloud_registed_downsize, 0.1);
 
     downSizeFilterCorner.setLeafSize(mappingCornerLeafSize, mappingCornerLeafSize, mappingCornerLeafSize);
     // downSizeFilterSurf.setLeafSize(mappingSurfLeafSize, mappingSurfLeafSize, mappingSurfLeafSize);
