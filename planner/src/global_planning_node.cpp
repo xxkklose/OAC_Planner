@@ -54,6 +54,13 @@ std::mutex dataMutex;
 using PointT = pcl::PointXYZ;
 using PointCloud = pcl::PointCloud<PointT>;
 
+enum State
+{
+  SearchMode,
+  ReturnMode,
+  AlignMode
+};
+
 //动态保存点云地图
 std::queue<pcl::PointCloud<pcl::PointXYZ>> pointcloud_map_queue;
 const int queue_size = 20;

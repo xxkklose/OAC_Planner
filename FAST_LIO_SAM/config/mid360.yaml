@@ -84,5 +84,5 @@ savePCD: false                         # https://github.com/TixiaoShan/LIO-SAM/i
 savePCDDirectory: "/fast_lio_sam_ws/src/FAST_LIO_SAM/PCD/"        # in your home folder, starts and ends with "/". Warning: the code deletes "LOAM" folder then recreates it. See "mapOptimization" for implementation
 
 # Radius removal
-radius : 0.2
+radius : 0.8
 pointnum: 10
