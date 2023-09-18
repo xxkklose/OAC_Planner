@@ -95,8 +95,9 @@ PFRRTStar* pf_rrt_star = NULL;
 double max_vel;
 double max_acc;
 
-std::fstream file;
 double plane_bottom;
+double planning_horizon;
+double planning_time_horizon; 
 
 //single thread for pose pub
 
@@ -199,41 +200,17 @@ void multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg
   pass.setFilterLimits(-9999, start_pt(2) + 2.0);
   pass.filter(*cloud);
 
-	// sor.setInputCloud(cloud);//设置待滤波的点云
-	// sor.setMeanK(50);//设置在进行统计时考虑查询点邻居点数
-	// sor.setStddevMulThresh(2.0);//设置判断是否为离群点的阈值
-	// sor.filter(*cloud);//将滤波结果保存在cloud_filtered中
-	// sor.setNegative(true);
-
-  // ror.setInputCloud(cloud);
-  // ror.setRadiusSearch(0.1); // 设置半径
-  // ror.setMinNeighborsInRadius(10); // 设置点数阈值
-
-  // // 执行滤波
-  // ror.filter(*cloud);
   auto end_time1 = std::chrono::steady_clock::now();
 
 
   world->initGridMap(*cloud);
   auto end_time2 = std::chrono::steady_clock::now();
 
-  // for (const auto& pt : *cloud)
-  // {
-  //   Vector3d obstacle(pt.x, pt.y, pt.z);
-  //   // if(grid_map_count_[idx(0)][idx(1)][idx(2)] >= 1){
-  //   //     grid_map_[idx(0)][idx(1)][idx(2)]=false;
-  //   // }
-  //   world->setObs(obstacle);
-  // }
   std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
     Vector3d obstacle(pt.x, pt.y, pt.z);  
     world->setObs(obstacle);  
   });  
-  // for (const auto& pt : *cloud)
-  // {
-  //   Vector3d obstacle(pt.x, pt.y, pt.z);
-  //   world->addObs(obstacle);
-  // }
+
   std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
     Vector3d obstacle(pt.x, pt.y, pt.z);  
     world->addObs(obstacle);  
@@ -280,34 +257,53 @@ void rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
 /**
  *@brief Linearly interpolate the generated path to meet the needs of local planning
  */
-void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* path_interpolation_pub)
+void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* path_to_control)
 {
-  if (path_interpolation_pub == NULL)
+  if (path_to_control == NULL)
     return;
-  Float32MultiArray msg;
+  // Float32MultiArray msg;
+  nav_msgs::Path path_to_control_msg;
+  path_to_control_msg.header.frame_id = "camera_init";
+  path_to_control_msg.header.stamp = ros::Time::now();
+  outputFile << "当前ros时间为： " << ros::Time::now() <<  "  新收到路径，路径长度为： " << solution.size() << "\n";
+  outputFile << "当前机器人三维坐标为： x: " << start_pose.pose.position.x << " y: " << start_pose.pose.position.y << " z: " << start_pose.pose.position.z; 
   for (size_t i = 0; i < solution.size(); i++)
   {
     if (i == solution.size() - 1)
     {
-      msg.data.push_back(solution[i]->position_(0));
-      msg.data.push_back(solution[i]->position_(1));
-      msg.data.push_back(solution[i]->position_(2));
+      geometry_msgs::PoseStamped pose; 
+      pose.header.frame_id = "camera_init";
+      pose.header.stamp = ros::Time::now();
+      pose.pose.position.x = solution[i]->position_(0);
+      pose.pose.position.y = solution[i]->position_(1);
+      pose.pose.position.z = solution[i]->position_(2);
+      path_to_control_msg.poses.push_back(pose);
+      outputFile << "第" << i << "个路径： 三维坐标为 x: " << pose.pose.position.x << " , y: " << pose.pose.position.y
+                  << " , z: " << pose.pose.position.z << "\n";
     }
     else
     {
       size_t interpolation_num = (size_t)(EuclideanDistance(solution[i + 1], solution[i]) / 0.1);
       Vector3d diff_pt = solution[i + 1]->position_ - solution[i]->position_;
+      outputFile << "进行插值： "  << i << " 和 " << i+1 << "点之间" << "\n";
       for (size_t j = 0; j < interpolation_num; j++)
       {
+        geometry_msgs::PoseStamped pose; 
+        pose.header.frame_id = "camera_init";
+        pose.header.stamp = ros::Time::now();
         Vector3d interpt = solution[i]->position_ + diff_pt * (float)j / interpolation_num;
-        msg.data.push_back(interpt(0));
-        msg.data.push_back(interpt(1));
-        msg.data.push_back(interpt(2));
+        pose.pose.position.x = interpt(0);
+        pose.pose.position.y = interpt(1);
+        pose.pose.position.z = interpt(2);
+        path_to_control_msg.poses.push_back(pose);
+        outputFile << "     第" << j << "个插入值： 三维坐标为 x: " << pose.pose.position.x << " , y: " << pose.pose.position.y
+                << " , z: " << pose.pose.position.z << "\n";
       }
     }
   }
-  path_interpolation_pub->publish(msg);
+  path_to_control->publish(path_to_control_msg);
 }
+
 
 /**
  *@brief On the premise that the origin and target have been specified,call PF-RRT* algorithm for planning.
@@ -320,7 +316,6 @@ void findSolution()
   Path solution = Path();
   ROS_WARN("findSolution to initWithGoal");
   pf_rrt_star->initWithGoal(start_pt, target_pt);
-  // pf_rrt_star->initWithGoal(target_pt, start_pt);
 
   // Case1: The PF-RRT* can't work at when the origin can't be project to surface
   if (pf_rrt_star->state() == Invalid)
@@ -452,10 +447,11 @@ void findSolution()
   ROS_INFO("End calling PF-RRT*");
   printf("=========================================================================\n");
 
-  pubInterpolatedPath(solution.nodes_, &path_interpolation_pub);
+  pubInterpolatedPath(solution.nodes_, &path_to_control);
+  // pubInterpolatedPath(solution.nodes_, &path_interpolation_pub);
   visPath(solution.nodes_, &path_vis_pub, start_pt);
   visSurf(solution.nodes_, &surf_vis_pub);
-  pubPathToControl(&path_to_control);
+  // pubPathToControl(&path_to_control);
 
   // When the PF-RRT* generates a short enough global path,it's considered that the robot has
   // reached the goal region.
@@ -530,7 +526,6 @@ void pubPathToControl(ros::Publisher* path_to_control_pub){
     pose.pose.position.y = mj.waypoints[i](1);
     pose.pose.position.z = mj.waypoints[i](2);
     path_to_control_msg.poses.push_back(pose);
-    file << "path point " << i << " : " << mj.waypoints[i](0) << " " << mj.waypoints[i](1) << " " << mj.waypoints[i](2) << "\n";
   }
   path_to_control_pub->publish(path_to_control_msg);
 }
@@ -627,8 +622,11 @@ int main(int argc, char** argv)
   nh.param("planning/max_acc", max_acc, 0.1);
 
   nh.param("planning/plane_bottom", plane_bottom, 0.45);
+  nh.param("planning/planning_horizon", planning_horizon, 5.0);
+  nh.param("planning/planning_time_horizon", planning_time_horizon, 0.5);
 
-  file.open("/home/beihang705/2.txt", std::ios::app);
+
+  outputFile.open("/home/parallels/OAC_Planner/src/OAC_Planner/planner/log/waypoint_log.txt", std::ios::app);
 
   // Initialization
   world = new World(resolution);
@@ -648,38 +646,16 @@ int main(int argc, char** argv)
 
   mj.traj_jerk_vis_pub_ = &traj_jerk_vis_pub;
   
-
-  // std::thread spinnerThread([&]() {
-
-  // });
-
-  // ros::MultiThreadedSpinner spinner(4);
-  // // ros::spin();
-  // spinner.spin();
-
-
-  
   while (ros::ok())
   {
-    // timeval start;
-    // gettimeofday(&start, NULL);
-
-    // Execute the callback functions to update the grid map and check if there's a new goal
     ros::spinOnce();
-    // Call the PF-RRT* to work
     callPlanner();
-    // double ms;
-    // do
-    // {
-    //   timeval end;
-    //   gettimeofday(&end, NULL);
-    //   ms = 1000 * (end.tv_sec - start.tv_sec) + 0.001 * (end.tv_usec - start.tv_usec);
-    // } while (ms < 100);  // Cycle in 100ms
+    ros::Duration(planning_time_horizon).sleep();
   }
 
   // spinnerThread.join();
   if(!ros::ok()){
-    file.close();
+    outputFile.close();
   } 
 
   return 0;
