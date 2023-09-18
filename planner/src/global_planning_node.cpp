@@ -69,7 +69,7 @@ Vector3d lastKeyPoint;
 std::queue<pcl::PointCloud<pcl::PointXYZ>> pointcloud_map_queue;
 const int queue_size = 20;
 std::queue<std::pair<PointCloud, Vector3d>> pointcloud_vector3d_queue;
-const int queue2_size = 10; //如果卡顿修改他
+const int queue2_size = 15; //如果卡顿修改他
 Vector3d last_point = {0,0,0};
 pcl::PassThrough<pcl::PointXYZ> pass;
 pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
@@ -328,33 +328,35 @@ void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* path_to_
   nav_msgs::Path path_to_control_msg;
   path_to_control_msg.header.frame_id = "camera_init";
   path_to_control_msg.header.stamp = ros::Time::now();
-  outputFile << "当前ros时间为： " << ros::Time::now() <<  "  新收到路径，路径长度为： " << solution.size() << "\n";
-  outputFile << "当前机器人三维坐标为： x: " << start_pose.pose.position.x << " y: " << start_pose.pose.position.y << " z: " << start_pose.pose.position.z; 
-  for (size_t i = solution.size() - 1; i > -1; i--)
+  outputFile << "当前ros时间为： " << ros::Time::now() << "\n" << "新收到路径，路径长度为： " << solution.size() << "\n";
+  outputFile << "当前机器人三维坐标为： x: " << start_pose.pose.position.x << " y: " << start_pose.pose.position.y << " z: " << start_pose.pose.position.z << "\n"; 
+  for (size_t i = 0; i < solution.size(); i--)
   {
-    if (i == solution.size() - 1)
+    int k = solution.size() - i -1;
+    outputFile<<"i: " << k << "\n";
+    if (k == 0)
     {
       geometry_msgs::PoseStamped pose; 
       pose.header.frame_id = "camera_init";
       pose.header.stamp = ros::Time::now();
-      pose.pose.position.x = solution[i]->position_(0);
-      pose.pose.position.y = solution[i]->position_(1);
-      pose.pose.position.z = solution[i]->position_(2);
+      pose.pose.position.x = solution[k]->position_(0);
+      pose.pose.position.y = solution[k]->position_(1);
+      pose.pose.position.z = solution[k]->position_(2);
       path_to_control_msg.poses.push_back(pose);
-      outputFile << "第" << solution.size() - i << "个路径： 三维坐标为 x: " << pose.pose.position.x << " , y: " << pose.pose.position.y
+      outputFile << "第" << i << "个路径： 三维坐标为 x: " << pose.pose.position.x << " , y: " << pose.pose.position.y
                   << " , z: " << pose.pose.position.z << "\n";
     }
     else
     {
-      size_t interpolation_num = (size_t)(EuclideanDistance(solution[i - 1], solution[i]) / 0.1);
-      Vector3d diff_pt = solution[i]->position_ - solution[i - 1]->position_;
-      outputFile << "进行插值： "  << solution.size() - i << " 和 " << solution.size() - i + 1 << "点之间" << "\n";
+      size_t interpolation_num = (size_t)(EuclideanDistance(solution[k], solution[k-1]) / 1.0);
+      Vector3d diff_pt = solution[k-1]->position_ - solution[k]->position_;
+      outputFile << "进行插值： "  << i << " 和 " << i + 1 << "点之间" << "\n";
       for (size_t j = 0; j < interpolation_num; j++)
       {
         geometry_msgs::PoseStamped pose; 
         pose.header.frame_id = "camera_init";
         pose.header.stamp = ros::Time::now();
-        Vector3d interpt = solution[i - 1]->position_ + diff_pt * (float)j / interpolation_num;
+        Vector3d interpt = solution[k]->position_ + diff_pt * (float)j / interpolation_num;
         pose.pose.position.x = interpt(0);
         pose.pose.position.y = interpt(1);
         pose.pose.position.z = interpt(2);
@@ -456,8 +458,10 @@ void findSolution()
 
     // visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
-    if (!solution.nodes_.empty())
+    if (!solution.nodes_.empty()){
       ROS_INFO("Get a global path!");
+      pubInterpolatedPath(solution.nodes_, &path_to_control);
+    }
     else
       ROS_WARN("No solution found!");
   }
@@ -496,21 +500,23 @@ void findSolution()
     }
 
     // Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj.waypoints.size()-1), 3);
-    // mj.getTimeVector(mj.waypoints,max_vel,max_acc); //TODO:max_vel, max_acc
+    // mj.getTimeVector(mj.waypoints,max_1: %f, time2: vel,max_acc); //TODO:max_vel, max_acc
     // mj.solve_minimum_jerk(mj.waypoints, mj.start_vel, mj.start_acc, coefficientMatrix);
     // mj.solve_minimum_jerk(mj.waypoints, {}, {}, coefficientMatrix);
 
     // visTrajectory(mj.waypoints, coefficientMatrix, mj.timeVector, mj.traj_jerk_vis_pub_);
 
     if (!solution.nodes_.empty())
+    {
       ROS_INFO("Get a sub path!");
+      pubInterpolatedPath(solution.nodes_, &path_to_control);
+    }
     else
       ROS_WARN("No solution found!");
   }
   ROS_INFO("End calling PF-RRT*");
   printf("=========================================================================\n");
 
-  pubInterpolatedPath(solution.nodes_, &path_to_control);
   // pubInterpolatedPath(solution.nodes_, &path_interpolation_pub);
   visPath(solution.nodes_, &path_vis_pub, start_pt);
   visSurf(solution.nodes_, &surf_vis_pub);
@@ -632,8 +638,8 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "global_planning_node");
   ros::NodeHandle nh("~");
 
-  map_sub = nh.subscribe("map", 1, pointCallback, ros::TransportHints().tcpNoDelay());
-  // map_sub = nh.subscribe("map", 1, multi_callback, ros::TransportHints().tcpNoDelay());
+  // map_sub = nh.subscribe("map", 1, pointCallback, ros::TransportHints().tcpNoDelay());
+  map_sub = nh.subscribe("map", 1, multi_callback, ros::TransportHints().tcpNoDelay());
   wp_sub = nh.subscribe("waypoints", 1, rcvWaypointsCallback);
   pose_sub = nh.subscribe("/global_planning_node/robot_pose", 1, rcvPoseCallback);
   returnMode_sub = nh.subscribe("/return_mode", 100, returnModeCallback);
@@ -657,7 +663,7 @@ int main(int argc, char** argv)
   tree_tra_pub = nh.advertise<std_msgs::Float32MultiArray>("tree_tra", 40);
   path_interpolation_pub = nh.advertise<std_msgs::Float32MultiArray>("global_path", 1000);
   pose_pub = nh.advertise<geometry_msgs::PoseStamped>("robotPose", 1000);
-  path_to_control = nh.advertise<nav_msgs::Path>("path_to_control", 1000);
+  path_to_control = nh.advertise<nav_msgs::Path>("path_to_control", 10);
   traj_jerk_vis_pub = nh.advertise<nav_msgs::Path>("trajectory_path", 40);
   cloud_registered_pub = nh.advertise<sensor_msgs::PointCloud2>("cloud_registered_surround", 100);
   marker_pub_box = nh.advertise<visualization_msgs::MarkerArray>("visualization_marker_box", 10);
@@ -691,7 +697,7 @@ int main(int argc, char** argv)
   nh.param("planning/planning_time_horizon", planning_time_horizon, 0.5);
 
 
-  outputFile.open("/home/parallels/OAC_Planner/src/OAC_Planner/planner/log/waypoint_log.txt", std::ios::app);
+  outputFile.open("/home/beihang705/catkin_mpc/src/OAC_Planner/planner/log/waypoint_log.txt", std::ios::app);
 
   // Initialization
   world = new World(resolution);
@@ -713,8 +719,12 @@ int main(int argc, char** argv)
   
   while (ros::ok())
   {
+    auto start_time = std::chrono::steady_clock::now();
     ros::spinOnce();
     callPlanner();
+    auto end_time = std::chrono::steady_clock::now();
+    auto time = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - start_time);
+    ROS_WARN("main loop time: %f", time.count());
     ros::Duration(planning_time_horizon).sleep();
   }
 

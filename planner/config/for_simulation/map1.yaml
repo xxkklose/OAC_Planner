@@ -25,7 +25,7 @@ planning:
 
   plane_bottom: -0.4
   planning_horizon: 4.0
-  planning_time_horizon: 0.5 
+  planning_time_horizon: 0
  
 
 

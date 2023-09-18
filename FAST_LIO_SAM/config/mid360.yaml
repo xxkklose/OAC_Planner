@@ -74,18 +74,18 @@ globalMapVisualizationPoseDensity: 10      # meters, global map visualization ke
 globalMapVisualizationLeafSize: 1.0           # meters, global map visualization cloud density
 
 # visual iktree_map  
-visulize_IkdtreeMap: true 
+visulize_IkdtreeMap: false 
 
 # visual iktree_map  
-recontructKdTree: true
+recontructKdTree: false
 
 # Export settings
 savePCD: false                         # https://github.com/TixiaoShan/LIO-SAM/issues/3
 savePCDDirectory: "/fast_lio_sam_ws/src/FAST_LIO_SAM/PCD/"        # in your home folder, starts and ends with "/". Warning: the code deletes "LOAM" folder then recreates it. See "mapOptimization" for implementation
 
 # Radius removal
-radius : 0.5
-pointnum: 10
+radius : 0.4
+pointnum: 20
 cloud_registed_downsize: 0.1
 
-filter_size_map: 0.1
+filter_size_map: 0.2

@@ -257,10 +257,14 @@ bool World::collisionFree(const Node* node_start,const Node* node_end)
         {
             for(int z=-2; z<=2; z++)
             {
-                for(int x=-3; x<=3; x++)
+                for(int x=-3; x<=2; x++)
                 {
-                    check_point=check_center+rotation_matrix*Vector3d(-0.4+0.2*x,0.2*y,0.1*z);
-                    if(!isFree(check_point)) return false;
+                    check_point=check_center+rotation_matrix*Vector3d(-0.2+0.2*x,0.15*y,0.1*z);
+                    if(!isFree(check_point)) 
+                    {
+                        // ROS_WARN("Collision!");
+                        return false;
+                    }
                 }
             }
         }
