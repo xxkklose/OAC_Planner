@@ -74,10 +74,10 @@ globalMapVisualizationPoseDensity: 10      # meters, global map visualization ke
 globalMapVisualizationLeafSize: 1.0           # meters, global map visualization cloud density
 
 # visual iktree_map  
-visulize_IkdtreeMap: false 
+visulize_IkdtreeMap: true 
 
 # visual iktree_map  
-recontructKdTree: false
+recontructKdTree: true
 
 # Export settings
 savePCD: false                         # https://github.com/TixiaoShan/LIO-SAM/issues/3
@@ -87,3 +87,5 @@ savePCDDirectory: "/fast_lio_sam_ws/src/FAST_LIO_SAM/PCD/"        # in your home
 radius : 0.5
 pointnum: 10
 cloud_registed_downsize: 0.1
+
+filter_size_map: 0.1
