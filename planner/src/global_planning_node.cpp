@@ -33,6 +33,8 @@ namespace backward
 backward::SignalHandling sh;
 }
 std::ofstream outputFile;
+std::ofstream keyPointDebug;
+std::ofstream alignPointDebug;
 
 // ros related
 ros::Subscriber map_sub, wp_sub, pose_sub, returnMode_sub, alignMode_sub;
@@ -62,8 +64,14 @@ enum MotionState
   AlignMode
 };
 MotionState motionState = SearchMode;
-std::vector<Vector3d> keyPoints;
+// std::vector<Vector3d> keyPoints;
+pcl::PointCloud<pcl::PointXYZ>::Ptr keyPoints(new pcl::PointCloud<pcl::PointXYZ>);
+pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+int K = 5;
 Vector3d lastKeyPoint;
+
+Vector3d normalAtObs;
+Vector3d pointAtObs;
 
 //动态保存点云地图
 std::queue<pcl::PointCloud<pcl::PointXYZ>> pointcloud_map_queue;
@@ -123,10 +131,10 @@ void rcvWaypointsCallback(const nav_msgs::Path& wp)
     return;
   has_goal = true;
   if(motionState == SearchMode)
+  {
     target_pt = Vector3d(wp.poses[0].pose.position.x, wp.poses[0].pose.position.y, wp.poses[0].pose.position.z);
-  else if(motionState == ReturnMode)
-    return;
-  ROS_INFO("Receive the planning target");
+    ROS_INFO("Receive the planning target");
+  }
 }
 
 int cloud_count = 0;
@@ -286,6 +294,17 @@ void rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
   dataMutex.lock();
   start_pt << pose.pose.position.x, pose.pose.position.y, pose.pose.position.z;
   start_pose = pose;
+  if(motionState == SearchMode)
+  {
+    if(start_pt.norm() == 0 || (lastKeyPoint - start_pt).norm() > 1.0)
+    {
+      keyPointDebug << "处于搜索模式，插入关键节点： " << "\n";
+      keyPointDebug << "三维坐标为： x: " << start_pt.x() << "  y: " << start_pt.y() << "  z: " << start_pt.z() << "\n";
+      PointT point(start_pt.x(), start_pt.y(), start_pt.z());
+      keyPoints->points.push_back(point);
+      lastKeyPoint = start_pt;
+    }
+  }
   dataMutex.unlock();
   // save vel_direction to minimum_jerk
   Eigen::Vector3d unit_vector = {1.0, 0.0, 0.0};
@@ -315,6 +334,11 @@ void returnModeCallback(const std_msgs::String& msg)
 {
   if(msg.data == "true") motionState = ReturnMode;
   else if(msg.data == "false") motionState = SearchMode;
+}
+
+void alignModeCallback(const std_msgs::String& msg)
+{
+
 }
 
 /**
@@ -580,6 +604,34 @@ void callPlanner()
     // ROS_INFO("The tree is large enough.Stop expansion!Current size: %d", (int)(pf_rrt_star->tree().size()));
 }
 
+void motionModeDetect()
+{
+  if(keyPoints->points.size() != 0) kdtree.setInputCloud(keyPoints);
+  if(motionState == ReturnMode)
+  {
+    keyPointDebug << "处于返航模式： 提取关键点： " << "\n";
+    PointT search_point(start_pt.x(), start_pt.y(), start_pt.z());
+    std::vector<int> indices(K);
+    std::vector<float> distance(K);
+    kdtree.nearestKSearch(search_point, K, indices, distance);
+    PointT target_point = keyPoints->points[indices[0]];
+    keyPointDebug << "提取到的关键点坐标为： x: " << target_point.x << "  y: " << target_point.y << "  z: " << target_point.z << "\n"; 
+    Vector3d temp_pt(target_point.x, target_point.y, target_point.z);
+    target_pt = Vector3d(target_point.x, target_point.y, target_point.z);
+    if((target_pt - start_pt).norm() < 0.3)
+    {
+      keyPoints->points.erase(keyPoints->points.begin() + indices[0]);
+      keyPointDebug << "在kdtree中清除了该关键点" << "\n";
+    }
+  }
+  else if(motionState == AlignMode)
+  {
+    alignPointDebug << "处于对齐模式：  提取对齐点： " << "\n";
+
+
+  }
+}
+
 void pubPathToControl(ros::Publisher* path_to_control_pub){
   // ROS_WARN("start_pt: %f, %f, %f", start_pt(0), start_pt(1), start_pt(2));
   if(path_to_control_pub == NULL)
@@ -697,7 +749,9 @@ int main(int argc, char** argv)
   nh.param("planning/planning_time_horizon", planning_time_horizon, 0.5);
 
 
-  outputFile.open("/home/beihang705/catkin_mpc/src/OAC_Planner/planner/log/waypoint_log.txt", std::ios::app);
+  outputFile.open("/home/parallels/OAC_Planner/src/OAC_Planner/planner/log/waypoint_log.txt", std::ios::app);
+  keyPointDebug.open("/home/parallels/OAC_Planner/src/OAC_Planner/planner/log/keypoint_log.txt", std::ios::app);
+  alignPointDebug.open("/home/parallels/OAC_Planner/src/OAC_Planner/planner/log/alignpoint_log.txt", std::ios::app);
 
   // Initialization
   world = new World(resolution);
@@ -721,6 +775,7 @@ int main(int argc, char** argv)
   {
     auto start_time = std::chrono::steady_clock::now();
     ros::spinOnce();
+    motionModeDetect();
     callPlanner();
     auto end_time = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - start_time);
@@ -731,6 +786,8 @@ int main(int argc, char** argv)
   // spinnerThread.join();
   if(!ros::ok()){
     outputFile.close();
+    keyPointDebug.close();
+    alignPointDebug.close();
   } 
 
   return 0;
