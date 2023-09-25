@@ -103,10 +103,10 @@ protected:
     //To accelerate the speed of generating the initial solution,the tree will grow toward the target with it,a centain probability 
     double goal_biased_=0.15;
 
-    double goal_threshold_=0.2;
+    double goal_threshold_=0.3;
     double sub_goal_threshold_=0.5;
 
-    double inherit_threshold_=0.4;
+    double inherit_threshold_=0.25;
 
     //step size used when generating new nodes
     double step_size_=1.0;

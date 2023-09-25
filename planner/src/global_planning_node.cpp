@@ -6,6 +6,7 @@
 #include <nav_msgs/Path.h>
 #include <std_msgs/Float32MultiArray.h>
 #include <std_msgs/String.h>
+#include <std_msgs/Bool.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -291,12 +292,12 @@ void multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg
 
 void rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
 {
-  dataMutex.lock();
+  // dataMutex.lock();
   start_pt << pose.pose.position.x, pose.pose.position.y, pose.pose.position.z;
   start_pose = pose;
-  if(motionState == SearchMode)
+  if(motionState == 0)
   {
-    if(start_pt.norm() == 0 || (lastKeyPoint - start_pt).norm() > 1.0)
+    if(keyPoints->points.size() == 0 || (lastKeyPoint - start_pt).norm() > 1.5)
     {
       keyPointDebug << "处于搜索模式，插入关键节点： " << "\n";
       keyPointDebug << "三维坐标为： x: " << start_pt.x() << "  y: " << start_pt.y() << "  z: " << start_pt.z() << "\n";
@@ -305,7 +306,7 @@ void rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
       lastKeyPoint = start_pt;
     }
   }
-  dataMutex.unlock();
+  // dataMutex.unlock();
   // save vel_direction to minimum_jerk
   Eigen::Vector3d unit_vector = {1.0, 0.0, 0.0};
   Eigen::Quaterniond tmp_quaternion(pose.pose.orientation.w, 
@@ -330,10 +331,10 @@ void rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
 
   return;
 }
-void returnModeCallback(const std_msgs::String& msg)
+void returnModeCallback(const std_msgs::Bool& msg)
 {
-  if(msg.data == "true") motionState = ReturnMode;
-  else if(msg.data == "false") motionState = SearchMode;
+  if(msg.data) motionState = ReturnMode;
+  else if(msg.data) motionState = SearchMode;
 }
 
 void alignModeCallback(const std_msgs::String& msg)
@@ -348,13 +349,19 @@ void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* path_to_
 {
   if (path_to_control == NULL)
     return;
+  if(solution.size() > 0)
+  {
+    Vector3d first_pt(solution[solution.size()-1]->position_(0),solution[solution.size()-1]->position_(1),solution[solution.size()-1]->position_(2));
+    if((first_pt-start_pt).norm()<0.1) return;
+  }
+
   // Float32MultiArray msg;
   nav_msgs::Path path_to_control_msg;
   path_to_control_msg.header.frame_id = "camera_init";
   path_to_control_msg.header.stamp = ros::Time::now();
   outputFile << "当前ros时间为： " << ros::Time::now() << "\n" << "新收到路径，路径长度为： " << solution.size() << "\n";
   outputFile << "当前机器人三维坐标为： x: " << start_pose.pose.position.x << " y: " << start_pose.pose.position.y << " z: " << start_pose.pose.position.z << "\n"; 
-  for (size_t i = 0; i < solution.size(); i--)
+  for (size_t i = 0; i < solution.size(); i++)
   {
     int k = solution.size() - i -1;
     outputFile<<"i: " << k << "\n";
@@ -372,9 +379,10 @@ void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* path_to_
     }
     else
     {
-      size_t interpolation_num = (size_t)(EuclideanDistance(solution[k], solution[k-1]) / 1.0);
+      // size_t interpolation_num = (size_t)(EuclideanDistance(solution[k], solution[k-1]) / 0.5);
+      size_t interpolation_num = 1; 
       Vector3d diff_pt = solution[k-1]->position_ - solution[k]->position_;
-      outputFile << "进行插值： "  << i << " 和 " << i + 1 << "点之间" << "\n";
+      // outputFile << "进行插值： "  << i << " 和 " << i + 1 << "点之间" << "\n";
       for (size_t j = 0; j < interpolation_num; j++)
       {
         geometry_msgs::PoseStamped pose; 
@@ -385,8 +393,10 @@ void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* path_to_
         pose.pose.position.y = interpt(1);
         pose.pose.position.z = interpt(2);
         path_to_control_msg.poses.push_back(pose);
-        outputFile << "     第" << j << "个插入值： 三维坐标为 x: " << pose.pose.position.x << " , y: " << pose.pose.position.y
-                << " , z: " << pose.pose.position.z << "\n";
+        // outputFile << "     第" << j << "个插入值： 三维坐标为 x: " << pose.pose.position.x << " , y: " << pose.pose.position.y
+        //         << " , z: " << pose.pose.position.z << "\n";
+        outputFile << "第" << i << "个路径： 三维坐标为 x: " << pose.pose.position.x << " , y: " << pose.pose.position.y
+                    << " , z: " << pose.pose.position.z << "\n";
       }
     }
   }
@@ -418,13 +428,23 @@ void findSolution()
   {
     ROS_WARN("findSolution to planner global");
     ROS_INFO("Starting PF-RRT* algorithm at the state of global planning");
-    int max_iter = 5000;
+    int max_iter = 2000;
+    // int max_iter = 5000;
     double max_time = 100.0;
 
+    ROS_WARN("pf_rrt_start->orign(): x: %f, y: %f, z: %f", 
+            pf_rrt_star->origin()->position_.x(), 
+            pf_rrt_star->origin()->position_.y(),
+            pf_rrt_star->origin()->position_.z());
+    ROS_WARN("pf_rrt_start->target(): x: %f, y: %f, z: %f", 
+        pf_rrt_star->target()->position_.x(), 
+        pf_rrt_star->target()->position_.y(),
+        pf_rrt_star->target()->position_.z());
     while (solution.type_ == Path::Empty && max_time < max_initial_time)
     {
       solution = pf_rrt_star->planner(max_iter, max_time);
       max_time += 100.0;
+      std::cout << solution.type_;
     }
     mj.waypoints.clear();
     double dist_sum, temp_dist = 0.0;
@@ -484,7 +504,6 @@ void findSolution()
 
     if (!solution.nodes_.empty()){
       ROS_INFO("Get a global path!");
-      pubInterpolatedPath(solution.nodes_, &path_to_control);
     }
     else
       ROS_WARN("No solution found!");
@@ -533,7 +552,6 @@ void findSolution()
     if (!solution.nodes_.empty())
     {
       ROS_INFO("Get a sub path!");
-      pubInterpolatedPath(solution.nodes_, &path_to_control);
     }
     else
       ROS_WARN("No solution found!");
@@ -542,6 +560,7 @@ void findSolution()
   printf("=========================================================================\n");
 
   // pubInterpolatedPath(solution.nodes_, &path_interpolation_pub);
+  pubInterpolatedPath(solution.nodes_, &path_to_control);
   visPath(solution.nodes_, &path_vis_pub, start_pt);
   visSurf(solution.nodes_, &surf_vis_pub);
   // pubPathToControl(&path_to_control);
@@ -607,7 +626,7 @@ void callPlanner()
 void motionModeDetect()
 {
   if(keyPoints->points.size() != 0) kdtree.setInputCloud(keyPoints);
-  if(motionState == ReturnMode)
+  if(motionState == 1)
   {
     keyPointDebug << "处于返航模式： 提取关键点： " << "\n";
     PointT search_point(start_pt.x(), start_pt.y(), start_pt.z());
@@ -615,16 +634,31 @@ void motionModeDetect()
     std::vector<float> distance(K);
     kdtree.nearestKSearch(search_point, K, indices, distance);
     PointT target_point = keyPoints->points[indices[0]];
-    keyPointDebug << "提取到的关键点坐标为： x: " << target_point.x << "  y: " << target_point.y << "  z: " << target_point.z << "\n"; 
-    Vector3d temp_pt(target_point.x, target_point.y, target_point.z);
-    target_pt = Vector3d(target_point.x, target_point.y, target_point.z);
-    if((target_pt - start_pt).norm() < 0.3)
+    if(indices.size() != 0 && distance.size() != 0 && distance[0] > 0.1)
     {
-      keyPoints->points.erase(keyPoints->points.begin() + indices[0]);
-      keyPointDebug << "在kdtree中清除了该关键点" << "\n";
+      keyPointDebug << "提取到的关键点坐标为： x: " << target_point.x << "  y: " << target_point.y << "  z: " << target_point.z << "\n"; 
+      Vector3d temp_pt(target_point.x, target_point.y, target_point.z);
+      target_pt = Vector3d(target_point.x, target_point.y, target_point.z);
+      has_goal = true;
+      ROS_WARN("target_pt: %f, %f, %f", target_pt(0), target_pt(1), target_pt(2));
+      ROS_WARN("start_pt: %f, %f, %f", start_pt(0), start_pt(1), start_pt(2));
+      if((target_pt - start_pt).norm() < 0.5)
+      {
+        has_goal = false;
+        if(keyPoints->points.size() != 1)
+        {
+          keyPoints->points.erase(keyPoints->points.begin() + indices[0]);
+          keyPointDebug << "在kdtree中清除了该关键点" << "\n";
+        }
+      }
+    }else
+    {
+      keyPointDebug << "kdtree has no keypoint" << "\n";
+      ROS_INFO("no keypoint, need set to SearchMode");
     }
+
   }
-  else if(motionState == AlignMode)
+  else if(motionState == 2)
   {
     alignPointDebug << "处于对齐模式：  提取对齐点： " << "\n";
 
@@ -749,9 +783,9 @@ int main(int argc, char** argv)
   nh.param("planning/planning_time_horizon", planning_time_horizon, 0.5);
 
 
-  outputFile.open("/home/parallels/OAC_Planner/src/OAC_Planner/planner/log/waypoint_log.txt", std::ios::app);
-  keyPointDebug.open("/home/parallels/OAC_Planner/src/OAC_Planner/planner/log/keypoint_log.txt", std::ios::app);
-  alignPointDebug.open("/home/parallels/OAC_Planner/src/OAC_Planner/planner/log/alignpoint_log.txt", std::ios::app);
+  outputFile.open("/home/beihang705/catkin_mpc/src/OAC_Planner/planner/log/waypoint_log.txt", std::ios::app);
+  keyPointDebug.open("/home/beihang705/catkin_mpc/src/OAC_Planner/planner/log/keypoint_log.txt", std::ios::app);
+  alignPointDebug.open("/home/beihang705/catkin_mpc/src/OAC_Planner/planner/log/alignpoint_log.txt", std::ios::app);
 
   // Initialization
   world = new World(resolution);
