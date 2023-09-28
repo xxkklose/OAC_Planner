@@ -164,7 +164,7 @@ void pointCallback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg)
 
   pass.setInputCloud(cloud);
   pass.setFilterFieldName("z");
-  pass.setFilterLimits(-9999, start_pt(2) + 2.0);
+  pass.setFilterLimits(-9999, start_pt(2) + 1.2);
   pass.filter(*cloud);
 
   auto end_time1 = std::chrono::steady_clock::now();
@@ -264,7 +264,7 @@ void multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg
 
   pass.setInputCloud(cloud);
   pass.setFilterFieldName("z");
-  pass.setFilterLimits(-9999, start_pt(2) + 2.0);
+  pass.setFilterLimits(-9999, start_pt(2) + 1.5);
   pass.filter(*cloud);
 
   auto end_time1 = std::chrono::steady_clock::now();
