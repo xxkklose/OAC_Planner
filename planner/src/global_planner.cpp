@@ -6,31 +6,39 @@ using namespace OAC::planner;
 void GlobalPlanner::init(ros::NodeHandle& nh)
 {
       // map_sub = nh.subscribe("map", 1, pointCallback, ros::TransportHints().tcpNoDelay());
-    map_sub_ = nh.subscribe("map", 1, &GlobalPlanner::multi_callback, this, ros::TransportHints().tcpNoDelay());
-    wp_sub_ = nh.subscribe("waypoints", 1, &GlobalPlanner::rcvWaypointsCallback, this);
-    // pose_sub_ = nh.subscribe("/Odometry", 1, &GlobalPlanner::rcvPoseCallback, this);
-    returnMode_sub_ = nh.subscribe("/return_mode", 100, &GlobalPlanner::returnModeCallback, this);
+    map_sub_                = nh.subscribe
+        ("map", 1, &GlobalPlanner::multi_callback, this, ros::TransportHints().tcpNoDelay());
+    wp_sub_                 = nh.subscribe
+        ("waypoints", 1, &GlobalPlanner::rcvWaypointsCallback, this);
+    pose_sub_               = nh.subscribe
+        ("/global_planning_node/robot_pose", 1, &GlobalPlanner::rcvPoseCallback, this);
+    returnMode_sub_         = nh.subscribe
+        ("/return_mode", 100, &GlobalPlanner::returnModeCallback, this);
 
-    grid_map_vis_pub_ = nh.advertise<sensor_msgs::PointCloud2>("grid_map_vis", 1);
-    path_vis_pub_ = nh.advertise<visualization_msgs::Marker>("path_vis", 40);
-    goal_vis_pub_ = nh.advertise<visualization_msgs::Marker>("goal_vis", 1);
-    surf_vis_pub_ = nh.advertise<sensor_msgs::PointCloud2>("surf_vis", 100);
-    tree_vis_pub_ = nh.advertise<visualization_msgs::Marker>("tree_vis", 40);
-    tree_tra_pub_ = nh.advertise<std_msgs::Float32MultiArray>("tree_tra", 40);
-    path_interpolation_pub_ = nh.advertise<std_msgs::Float32MultiArray>("global_path", 1000);
-    pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("robotPose", 1000);
-    path_to_control_ = nh.advertise<nav_msgs::Path>("path_to_control", 10);
-    traj_jerk_vis_pub_ = nh.advertise<nav_msgs::Path>("trajectory_path", 40);
-    cloud_registered_pub_ = nh.advertise<sensor_msgs::PointCloud2>("cloud_registered_surround", 100);
-    marker_pub_box_ = nh.advertise<visualization_msgs::MarkerArray>("visualization_marker_box", 10);
-
-    nh.param("map/resolution", resolution_, 0.1);
-
-    // 规划参数
-    nh.param("planning/goal_thre", goal_thre_, 1.0);
-    nh.param("planning/step_size", step_size_, 0.2);
-    nh.param("planning/h_surf_car", h_surf_car_, 0.1);
-    nh.param("planning/neighbor_radius", neighbor_radius_, 1.0);
+    grid_map_vis_pub_       = nh.advertise<sensor_msgs::PointCloud2>
+        ("grid_map_vis", 1);
+    path_vis_pub_           = nh.advertise<visualization_msgs::Marker>
+        ("path_vis", 40);
+    goal_vis_pub_           = nh.advertise<visualization_msgs::Marker>
+        ("goal_vis", 1);
+    surf_vis_pub_           = nh.advertise<sensor_msgs::PointCloud2>
+        ("surf_vis", 100);
+    tree_vis_pub_           = nh.advertise<visualization_msgs::Marker>
+        ("tree_vis", 40);
+    tree_tra_pub_           = nh.advertise<std_msgs::Float32MultiArray>
+        ("tree_tra", 40);
+    path_interpolation_pub_ = nh.advertise<std_msgs::Float32MultiArray>
+        ("global_path", 1000);
+    pose_pub_               = nh.advertise<geometry_msgs::PoseStamped>
+        ("robotPose", 1000);
+    path_to_control_        = nh.advertise<nav_msgs::Path>
+        ("path_to_control", 10);
+    traj_jerk_vis_pub_      = nh.advertise<nav_msgs::Path>
+        ("trajectory_path", 40);
+    cloud_registered_pub_   = nh.advertise<sensor_msgs::PointCloud2>
+        ("cloud_registered_surround", 100);
+    marker_pub_box_         = nh.advertise<visualization_msgs::MarkerArray>
+        ("visualization_marker_box", 10);
 
     // 平面拟合参数
     nh.param("planning/w_fit_plane", fit_plane_arg_.w_total_, 0.4);
@@ -40,34 +48,57 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
     nh.param("planning/ratio_min", fit_plane_arg_.ratio_min_, 0.25);
     nh.param("planning/ratio_max", fit_plane_arg_.ratio_max_, 0.4);
     nh.param("planning/conv_thre", fit_plane_arg_.conv_thre_, 0.1152);
-
     nh.param("planning/radius_fit_plane", radius_fit_plane_, 1.0); // 拟合平面半径
-
     nh.param("planning/max_initial_time", max_initial_time_, 1000.0); // 最大初始化时间
+    
 
     nh.param("planning/max_vel", max_vel_, 0.3);
     nh.param("planning/max_acc", max_acc_, 0.1);
 
-    nh.param("planning/plane_bottom", plane_bottom_, 0.45);
+    nh.param("map/queue_size", queue_size_, 20);
+    nh.param("map/queue2_size", queue2_size_, 15);
+    nh.param("planning/plane_bottom", plane_bottom_, -0.45);
     nh.param("planning/planning_horizon", planning_horizon_, 5.0);
     nh.param("planning/planning_time_horizon", planning_time_horizon_, 0.5);
 
+    // rrt_planner参数
+    double goal_biased;
+    double sub_goal_threshold;
+    double inherit_threshold;
+    // 规划参数
+    nh.param("map/resolution", resolution_, 0.1);
+    nh.param("planning/step_size", step_size_, 0.2);
+    nh.param("planning/h_surf_car", h_surf_car_, 0.1);
+    nh.param("planning/neighbor_radius", neighbor_radius_, 1.0);
+    nh.param("plannning/goal_biased", goal_biased, 0.15);
+    nh.param("planning/goal_thre", goal_thre_, 1.0);
+    nh.param("plannning/sub_goal_threshold", sub_goal_threshold, 0.15);
+    nh.param("plannning/inherit_threshold", inherit_threshold, 0.4);
 
-    outputFile_.open("/home/parallels/OAC_Planner/src/OAC_Planner/planner/log/waypoint_log.txt", std::ios::app);
-    keyPointDebug_.open("/home/parallels/OAC_Planner/src/OAC_Planner/planner/log/keypoint_log.txt", std::ios::app);
-    alignPointDebug_.open("/home/parallels/OAC_Planner/src/OAC_Planner/planner/log/alignpoint_log.txt", std::ios::app);
 
-      // Initialization
+
+    // 获取当前节点的包路径
+    std::string package_path = ros::package::getPath("planner");
+
+    outputFile_.open(package_path + "/log/waypoint_log.txt", std::ios::out | std::ios::trunc);
+    keyPointDebug_.open(package_path + "/log/keypoint_log.txt", std::ios::out | std::ios::trunc);
+    alignPointDebug_.open(package_path + "/log/alignpoint_log.txt", std::ios::out | std::ios::trunc);
+
+    // Initialization
     world_ = new World(resolution_);
   
     pf_rrt_star_ = new PFRRTStar(h_surf_car_, world_);
 
     // Set argument of PF-RRT*
     pf_rrt_star_->setGoalThre(goal_thre_);
-    pf_rrt_star_->setStepSize(step_size_);
+    pf_rrt_star_->setSubGoalThre(sub_goal_threshold);
+    pf_rrt_star_->setInheritThre(inherit_threshold);
     pf_rrt_star_->setFitPlaneArg(fit_plane_arg_);
-    pf_rrt_star_->setFitPlaneRadius(radius_fit_plane_);
     pf_rrt_star_->setNeighborRadius(neighbor_radius_);
+    pf_rrt_star_->setFitPlaneRadius(radius_fit_plane_);
+    pf_rrt_star_->setStepSize(step_size_);
+    pf_rrt_star_->setGoalBiased(goal_biased);
+
 
     pf_rrt_star_->goal_vis_pub_ = &goal_vis_pub_;
     pf_rrt_star_->tree_vis_pub_ = &tree_vis_pub_;
@@ -278,7 +309,7 @@ void GlobalPlanner::rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
   pose_to_control.header.frame_id = "camera_init";
   pose_to_control.header.stamp = ros::Time::now();
   pose_to_control.pose = pose.pose;
-  pose_pub_.publish(pose_to_control);
+  // pose_pub_.publish(pose_to_control);
   visualBox(pose_to_control);
 
   return;
@@ -326,6 +357,7 @@ void GlobalPlanner::pubInterpolatedPath(const vector<Node*>& solution, ros::Publ
     else
     {
       size_t interpolation_num = (size_t)(EuclideanDistance(solution[k], solution[k-1]) / 1.0);
+      interpolation_num = interpolation_num > 0 ? interpolation_num : 1;
       Vector3d diff_pt = solution[k-1]->position_ - solution[k]->position_;
       outputFile_ << "进行插值： "  << i << " 和 " << i + 1 << "点之间" << "\n";
       for (size_t j = 0; j < interpolation_num; j++)
@@ -343,6 +375,7 @@ void GlobalPlanner::pubInterpolatedPath(const vector<Node*>& solution, ros::Publ
       }
     }
   }
+  outputFile_ << "输出的路径的长度为： " << path_to_control_msg.poses.size() << "\n";
   path_to_control->publish(path_to_control_msg);
 }
 
@@ -407,7 +440,7 @@ void GlobalPlanner::findSolution()
     
 
     // Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj_.waypoints.size()-1), 3);
-    // mj_.getTimeVector(0.3,0.1); //TODO:max_vel, max_acc
+    // mj_.getTimeVector(0.3,0.1); 
     // mj_.solve_minimum_jerk(mj_.start_vel, mj_.start_acc, coefficientMatrix);
     // mj_.solve_minimum_jerk({0,0,0}, {0,0,0}, coefficientMatrix); //暂时先用零向量代替
 
@@ -477,7 +510,7 @@ void GlobalPlanner::findSolution()
     }
 
     // Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(6*(mj_.waypoints.size()-1), 3);
-    // mj_.getTimeVector(mj_.waypoints,max_1: %f, time2: vel,max_acc); //TODO:max_vel, max_acc
+    // mj_.getTimeVector(mj_.waypoints,max_1: %f, time2: vel,max_acc); 
     // mj_.solve_minimum_jerk(mj_.waypoints, mj_.start_vel, mj_.start_acc, coefficientMatrix);
     // mj_.solve_minimum_jerk(mj_.waypoints, {}, {}, coefficientMatrix);
 
@@ -557,9 +590,13 @@ void GlobalPlanner::callPlanner()
     // ROS_INFO("The tree is large enough.Stop expansion!Current size: %d", (int)(pf_rrt_star_->tree().size()));
 }
 
+
+/*
+  @brief 运动模式检测，判断当前机器人处于哪种运动模式
+*/
 void GlobalPlanner::motionModeDetect()
 {
-  if(keyPoints_->points.size() != 0) kdtree_.setInputCloud(keyPoints_);
+  if(keyPoints_->points.size() != 0) kdtree_.setInputCloud(keyPoints_); // 关键点不为空，建立kdtree
   if(motionState_ == ReturnMode)
   {
     keyPointDebug_ << "处于返航模式： 提取关键点： " << "\n";

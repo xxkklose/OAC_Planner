@@ -21,7 +21,8 @@
 #include <mutex>
 #include <chrono>
 #include <execution>  
-#include <algorithm>  
+#include <algorithm>
+#include <ros/package.h>
 
 using namespace std;
 using namespace std_msgs;
@@ -70,7 +71,7 @@ class GlobalPlanner  //全局规划类
 
         std::mutex dataMutex_;
 
-        pcl::PointCloud<PointT>::Ptr keyPoints_; //TODO: 添加初始化函数进行处理
+        pcl::PointCloud<PointT>::Ptr keyPoints_; 
         pcl::KdTreeFLANN<PointT> kdtree_;
         int K = 5;
         Vector3d lastKeyPoint_;

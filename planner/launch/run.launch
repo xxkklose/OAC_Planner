@@ -1,5 +1,5 @@
 <launch>
-  <include file="$(find fast_lio_sam)/launch/mapping_mid360_indoor.launch">
+  <include file="$(find fast_lio)/launch/mapping_mid360.launch">
 	  <!-- <arg name="rviz" value="false"/> -->
   </include>
 
@@ -17,7 +17,7 @@
       <!-- <remap from="~map"             to="/Laser_map"/> -->
       <remap from="~map"             to="/cloud_registered"/> 
 
-      <rosparam command="load" file="$(find planner)/config/for_simulation/map1.yaml"/>
+      <rosparam command="load" file="$(find planner)/config/for_simulation/param.yaml"/>
   </node>
 
   <!-- <node pkg="planner" type="local_obs_node" name="local_obs_node" output="screen" required = "true">

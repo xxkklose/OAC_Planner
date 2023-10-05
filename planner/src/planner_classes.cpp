@@ -145,21 +145,7 @@ World::~World(){clearMap();}
 void World::clearMap()
 {
     if(has_map_)
-    {
-        // for(int i=0;i < idx_count_(0);i++)
-        // {
-        //     for(int j=0;j < idx_count_(1);j++)
-        //     {
-        //         delete[] grid_map_[i][j];
-        //         grid_map_[i][j]=NULL;
-        //     }
-        //     delete[] grid_map_[i];
-        //     grid_map_[i]=NULL;
-        // }
-        // delete[] grid_map_;
-        // grid_map_=NULL;
         grid_map_.clear();
-    }
 }
 
 void World::initGridMap(const Vector3d &lowerbound,const Vector3d &upperbound)
@@ -168,16 +154,6 @@ void World::initGridMap(const Vector3d &lowerbound,const Vector3d &upperbound)
     lowerbound_=lowerbound;
     upperbound_=upperbound;
     idx_count_=((upperbound_-lowerbound_)/resolution_).cast<int>()+Eigen::Vector3i::Ones();
-    // grid_map_=new bool**[idx_count_(0)];
-    // for(int i = 0 ; i < idx_count_(0) ; i++)
-    // {
-    //     grid_map_[i]=new bool*[idx_count_(1)];
-    //     for(int j = 0 ; j < idx_count_(1) ; j++)
-    //     {
-    //         grid_map_[i][j]=new bool[idx_count_(2)];
-    //         memset(grid_map_[i][j],true,idx_count_(2)*sizeof(bool));
-    //     }
-    // }
     grid_map_.resize(idx_count_(0), std::vector<std::vector<bool>>(idx_count_(1), std::vector<bool>(idx_count_(2), true)));
     has_map_=true;
 }
@@ -257,12 +233,12 @@ bool World::collisionFree(const Node* node_start,const Node* node_end)
         {
             for(int z=-2; z<=2; z++)
             {
-                for(int x=-3; x<=2; x++)
+                for(int x=-4; x<=6; x++)
                 {
-                    check_point=check_center+rotation_matrix*Vector3d(-0.2+0.2*x,0.15*y,0.1*z);
+                    // 整车长 75cm, 摆臂长25cm， 宽度45cm，高度25cm
+                    check_point=check_center+rotation_matrix*Vector3d(-0.263 + 0.097 * x, 0.15 * y, 0.1 * z);
                     if(!isFree(check_point)) 
                     {
-                        // ROS_WARN("Collision!");
                         return false;
                     }
                 }
@@ -275,10 +251,6 @@ bool World::collisionFree(const Node* node_start,const Node* node_end)
 void World::setObs(const Vector3d &point)
 {   
     Vector3i idx=coord2index(point);
-    // grid_map_count_[idx(0)][idx(1)][idx(2)]++;
-    // if(grid_map_count_[idx(0)][idx(1)][idx(2)] >= 3){
-    //     grid_map_[idx(0)][idx(1)][idx(2)]=false;
-    // }
     grid_map_[idx(0)][idx(1)][idx(2)]=false;
 }
 

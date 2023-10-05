@@ -64,7 +64,11 @@ public:
 
     void setGoalThre(const double &threshold){goal_threshold_=threshold;}
 
+    void setSubGoalThre(const double &threshold){sub_goal_threshold_=threshold;}
+
     void setGoalBiased(const double &goal_biased){goal_biased_=goal_biased;}
+
+    void setInheritThre(const double &threshold){inherit_threshold_=threshold;}
 
     void setNeighborRadius(const double &neighbor_radius){neighbor_radius_=neighbor_radius;}
 
@@ -100,7 +104,8 @@ protected:
     int curr_iter_;
     double curr_time_;//(in ms)
 
-    //To accelerate the speed of generating the initial solution,the tree will grow toward the target with it,a centain probability 
+    //To accelerate the speed of generating the initial solution,the tree will grow toward the target with it,a centain probability
+    // 这些都是设置的默认值，具体数值查看param.yaml 
     double goal_biased_=0.15;
 
     double goal_threshold_=0.2;
