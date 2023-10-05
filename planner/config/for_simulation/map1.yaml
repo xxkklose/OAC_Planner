@@ -5,6 +5,9 @@ map:
   map_y_l: -20.0
   map_y_u: 20.0
 
+  queue_size: 20 #TODO: 添加读取队列长度
+  queue2_size: 15
+
 planning: 
   step_size: 0.6
   h_surf_car: 0.65
