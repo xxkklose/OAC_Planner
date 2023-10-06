@@ -41,6 +41,7 @@ class GlobalPlanner  //全局规划类
         std::ofstream outputFile_;
         std::ofstream keyPointDebug_;
         std::ofstream alignPointDebug_;
+        std::ofstream logFile_;
 
         // ros related 激光点云地图、中间点、位姿、返回模式、对齐模式
         ros::Subscriber map_sub_, wp_sub_, pose_sub_, returnMode_sub_, alignMode_sub_;
@@ -135,7 +136,21 @@ class GlobalPlanner  //全局规划类
         void returnModeCallback(const std_msgs::String& msg);
         void alignModeCallback(const std_msgs::String& msg);
         void visualBox(const geometry_msgs::PoseStamped& pose);
+        void plotLog();
         void exit();
+
+        // log struct
+        bool run_time_log_ = false;
+
+        struct logPlot
+        {
+            double main_loop_time;
+            double map_construction_time;
+            double planning_time;
+        };
+
+        logPlot log_data_;
+
 };
     
 

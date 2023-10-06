@@ -11,13 +11,19 @@ int main(int argc, char** argv)
   while (ros::ok())
   {
     auto start_time = std::chrono::steady_clock::now();
+
     ros::spinOnce();
     gp->motionModeDetect();
     gp->callPlanner();
+    
     auto end_time = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - start_time);
     // ROS_WARN("main loop time: %f", time.count());
     // ros::Duration(planning_time_horizon).sleep();
+    
+    gp->log_data_.main_loop_time = time.count();
+    if(gp->run_time_log_)
+      gp->plotLog();
   }
 
   if(!ros::ok())

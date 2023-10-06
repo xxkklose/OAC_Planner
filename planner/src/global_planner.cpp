@@ -75,7 +75,8 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
     nh.param("plannning/sub_goal_threshold", sub_goal_threshold, 0.15);
     nh.param("plannning/inherit_threshold", inherit_threshold, 0.4);
 
-
+    // logPlot 记录
+    nh.param("run_time_log", run_time_log_, false);
 
     // 获取当前节点的包路径
     std::string package_path = ros::package::getPath("planner");
@@ -83,6 +84,7 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
     outputFile_.open(package_path + "/log/waypoint_log.txt", std::ios::out | std::ios::trunc);
     keyPointDebug_.open(package_path + "/log/keypoint_log.txt", std::ios::out | std::ios::trunc);
     alignPointDebug_.open(package_path + "/log/alignpoint_log.txt", std::ios::out | std::ios::trunc);
+    logFile_.open(package_path + "/log/plot_log.txt", std::ios::out | std::ios::trunc);
 
     // Initialization
     world_ = new World(resolution_);
@@ -123,63 +125,65 @@ void GlobalPlanner::rcvWaypointsCallback(const nav_msgs::Path& wp)
   }
 }
 
-void GlobalPlanner::pointCallback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg)
-{
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::fromROSMsg(*cloud_registered_msg, *cloud); 
-  std::cout<<"cloud_size: "<<cloud->size()<<"\n";
+// void GlobalPlanner::pointCallback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg)
+// {
+//   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+//   pcl::fromROSMsg(*cloud_registered_msg, *cloud); 
+//   std::cout<<"cloud_size: "<<cloud->size()<<"\n";
 
-  //转换坐标
-  Eigen::Vector3d translation(start_pose_.pose.position.x, start_pose_.pose.position.y, start_pose_.pose.position.z);
-  Eigen::Quaterniond rotation(start_pose_.pose.orientation.w, start_pose_.pose.orientation.x,
-                              start_pose_.pose.orientation.y, start_pose_.pose.orientation.z);
-  Eigen::Matrix3d rotationMatrix = rotation.toRotationMatrix();
-  for(int i = -14; i <= 14 ; i++){
-    for(int j = -14; j <= 14; j++){
-      Vector3d plane = {i*0.05,j*0.05,plane_bottom_};
-      Vector3d plane_transformed = rotationMatrix * plane + translation;
-      PointT point;
-      point.x = plane_transformed(0);
-      point.y = plane_transformed(1);
-      point.z = plane_transformed(2);
-      cloud->points.push_back(point);
-    }
-  }
+//   //转换坐标
+//   Eigen::Vector3d translation(start_pose_.pose.position.x, start_pose_.pose.position.y, start_pose_.pose.position.z);
+//   Eigen::Quaterniond rotation(start_pose_.pose.orientation.w, start_pose_.pose.orientation.x,
+//                               start_pose_.pose.orientation.y, start_pose_.pose.orientation.z);
+//   Eigen::Matrix3d rotationMatrix = rotation.toRotationMatrix();
+//   for(int i = -14; i <= 14 ; i++){
+//     for(int j = -14; j <= 14; j++){
+//       Vector3d plane = {i*0.05,j*0.05,plane_bottom_};
+//       Vector3d plane_transformed = rotationMatrix * plane + translation;
+//       PointT point;
+//       point.x = plane_transformed(0);
+//       point.y = plane_transformed(1);
+//       point.z = plane_transformed(2);
+//       cloud->points.push_back(point);
+//     }
+//   }
 
-  pass_.setInputCloud(cloud);
-  pass_.setFilterFieldName("z");
-  pass_.setFilterLimits(-9999, start_pt_(2) + 2.0);
-  pass_.filter(*cloud);
+//   pass_.setInputCloud(cloud);
+//   pass_.setFilterFieldName("z");
+//   pass_.setFilterLimits(-9999, start_pt_(2) + 2.0);
+//   pass_.filter(*cloud);
 
-  auto end_time1 = std::chrono::steady_clock::now();
+//   auto start_time = std::chrono::steady_clock::now();
+//   world_->initGridMap(*cloud);
+//   auto end_time1 = std::chrono::steady_clock::now();
 
-  world_->initGridMap(*cloud);
-  auto end_time2 = std::chrono::steady_clock::now();
+//   std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
+//     Vector3d obstacle(pt.x, pt.y, pt.z);  
+//     world_->setObs(obstacle);  
+//   });  
 
-  std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
-    Vector3d obstacle(pt.x, pt.y, pt.z);  
-    world_->setObs(obstacle);  
-  });  
+//   std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
+//     Vector3d obstacle(pt.x, pt.y, pt.z);  
+//     world_->addObs(obstacle);  
+//   });  
 
-  std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
-    Vector3d obstacle(pt.x, pt.y, pt.z);  
-    world_->addObs(obstacle);  
-  });  
+//   auto end_time2 = std::chrono::steady_clock::now();
 
-  // auto time1 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time1 - start_time);
-  // auto time2 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time2 - start_time);
-  // ROS_WARN("time1: %f, time2: %f", time1.count(), time2.count());
+//   auto time1 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time1 - start_time);
+//   auto time2 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time2 - start_time);
+//   // ROS_WARN("time1: %f, time2: %f", time1.count(), time2.count());
 
-  visWorld(world_, &grid_map_vis_pub_);
+//   log_data_.map_construction_time = time1.count();
 
-}
+//   visWorld(world_, &grid_map_vis_pub_);
+
+// }
 // void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
 //                     const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg) {
 void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg) {
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
   // pcl::fromROSMsg(*surfmap_msg, *cloud);
   // std::cout<<"cloud size: "<<cloud->size()<<std::endl;
-  std::cout << "callback " << "\n";
   auto start_time = std::chrono::steady_clock::now();
 
   sensor_msgs::PointCloud2 msg;
@@ -250,11 +254,8 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
   pass_.setFilterLimits(-9999, start_pt_(2) + 2.0);
   pass_.filter(*cloud);
 
-  auto end_time1 = std::chrono::steady_clock::now();
-
-
   world_->initGridMap(*cloud);
-  auto end_time2 = std::chrono::steady_clock::now();
+  auto end_time1 = std::chrono::steady_clock::now();
 
   std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
     Vector3d obstacle(pt.x, pt.y, pt.z);  
@@ -265,10 +266,14 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
     Vector3d obstacle(pt.x, pt.y, pt.z);  
     world_->addObs(obstacle);  
   });  
+  auto end_time2 = std::chrono::steady_clock::now();
 
-  auto time1 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time1 - start_time);
-  auto time2 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time2 - start_time);
-  ROS_WARN("time1: %f, time2: %f", time1.count(), time2.count());
+
+  auto time1 = std::chrono::duration_cast<std::chrono::duration<double,std::milli>>(end_time1 - start_time);
+  auto time2 = std::chrono::duration_cast<std::chrono::duration<double,std::milli>>(end_time2 - start_time);
+  ROS_WARN("time1: %f ms, time2: %f ms", time1.count(), time2.count());
+
+  log_data_.map_construction_time = time1.count();
 
   visWorld(world_, &grid_map_vis_pub_);
 }
@@ -560,6 +565,7 @@ void GlobalPlanner::callPlanner()
   /*
     按照是否有目标点进行
   */
+  auto start_time = std::chrono::steady_clock::now();
   if (!has_goal_ && init_time_cost < 1000)
   {
     timeval start;
@@ -585,6 +591,11 @@ void GlobalPlanner::callPlanner()
     findSolution();
     init_time_cost = 0.0;
   }
+  auto end_time = std::chrono::steady_clock::now();
+  auto time = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - start_time);
+
+  log_data_.planning_time = time.count();
+
   // The expansion of tree will stop after the process of initialization takes more than 1s
   // else
     // ROS_INFO("The tree is large enough.Stop expansion!Current size: %d", (int)(pf_rrt_star_->tree().size()));
@@ -675,11 +686,20 @@ void GlobalPlanner::visualBox(const geometry_msgs::PoseStamped& pose){
         marker_pub_box_.publish(marker_array);
 }
 
+void GlobalPlanner::plotLog()
+{
+  if(log_data_.map_construction_time == 0) return;
+  logFile_ << log_data_.main_loop_time << " " 
+           << log_data_.map_construction_time << " " 
+           << log_data_.planning_time << "\n";
+}
+
 void GlobalPlanner::exit()
 {
     outputFile_.close();
     keyPointDebug_.close();
     alignPointDebug_.close();
+    logFile_.close();
 }
 
 GlobalPlanner::GlobalPlanner(/* args */)

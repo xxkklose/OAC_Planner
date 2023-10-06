@@ -180,20 +180,14 @@ void World::initGridMap(const pcl::PointCloud<pcl::PointXYZ> &cloud)
 
     idx_count_ = ((upperbound_-lowerbound_)/resolution_).cast<int>() + Eigen::Vector3i::Ones();
 
-    ROS_WARN("idx_count_(0): %d", idx_count_(0));
-    ROS_WARN("idx_count_(1): %d", idx_count_(1));
-    ROS_WARN("idx_count_(2): %d", idx_count_(2));
+    ROS_WARN("idx_count_(0): %d , idx_count_(1): %d , idx_count_(2): %d", idx_count_(0), idx_count_(1), idx_count_(2));
     
     grid_map_.resize(idx_count_(0), std::vector<std::vector<bool>>(idx_count_(1), std::vector<bool>(idx_count_(2), true)));
 
     auto end_time2 = std::chrono::steady_clock::now();
-    // std::for_each(std::execution::par, grid_map_.begin(), grid_map_.end(), [](std::vector<std::vector<bool>>& row) {
-    //     std::for_each(std::execution::par, row.begin(), row.end(), [](std::vector<bool>& column) {
-    //         std::fill(std::execution::par, column.begin(), column.end(), true);
-    //     });
-    // });
-    ROS_WARN("TimeIn1: %f", std::chrono::duration_cast<std::chrono::duration<double>>(end_time1 - start_tiem).count());
-    ROS_WARN("TimeIn2: %f", std::chrono::duration_cast<std::chrono::duration<double>>(end_time2 - end_time1).count());
+    ROS_WARN("TimeIn1: %f , TimeIn2: %f", 
+                std::chrono::duration_cast<std::chrono::duration<double>>(end_time1 - start_tiem).count(),
+                std::chrono::duration_cast<std::chrono::duration<double>>(end_time2 - end_time1).count());
     has_map_=true;
 }
  

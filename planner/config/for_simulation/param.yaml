@@ -33,6 +33,8 @@ planning:
   plane_bottom: -0.4
   planning_horizon: 4.0
   planning_time_horizon: 0
+
+run_time_log: true
  
 
 
