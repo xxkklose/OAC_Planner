@@ -145,7 +145,9 @@ World::~World(){clearMap();}
 void World::clearMap()
 {
     if(has_map_)
+    {
         grid_map_.clear();
+    }
 }
 
 void World::initGridMap(const Vector3d &lowerbound,const Vector3d &upperbound)
@@ -250,26 +252,6 @@ void World::setObs(const Vector3d &point)
 
 void World::addObs(const Vector3d &point)
 {
-    Vector3i idx=coord2index(point);
-    int sorrounding_count=0;
-    for(int i=-1;i<=1;i++)
-    {
-        for(int j=-1;j<=1;j++)
-        {
-            for(int k=-1;k<=1;k++)
-            {
-                Vector3i temp_idx=idx+Vector3i(i,j,k);
-                if(isInsideBorder(temp_idx) && !grid_map_[idx(0)+i][idx(1)+j][idx(2)+k])
-                {
-                    sorrounding_count++;
-                }
-            }
-        }
-    }
-    if(sorrounding_count >= 4)
-    {
-        grid_map_[idx(0)][idx(1)][idx(2)]=false;
-    }
 }
 
 bool World::isFree(const Vector3d &point)

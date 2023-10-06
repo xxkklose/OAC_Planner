@@ -184,20 +184,31 @@ public:
      */
     float getResolution(){return resolution_;} 
 
-    Eigen::Vector3d index2coord(const Eigen::Vector3i &index)
+    inline Eigen::Vector3d index2coord(const Eigen::Vector3i &index)
     {
         Eigen::Vector3d coord = resolution_*index.cast<double>() + lowerbound_+ 0.5*resolution_*Eigen::Vector3d::Ones();
         return coord;
     }
 
-    Eigen::Vector3i coord2index(const Eigen::Vector3d &coord)
+    inline Eigen::Vector3i coord2index(const Eigen::Vector3d &coord)
     {
         Eigen::Vector3i index = ( (coord-lowerbound_)/resolution_).cast<int>();            
         return index;
     }
+
+    inline bool isGrid(const Eigen::Vector3i& coord)
+    {
+        auto it = std::find(effect_grid_.begin(), effect_grid_.end(), coord);
+        if(it != effect_grid_.end())
+            return false;
+
+        return true;
+    }
 //protected:
     // bool ***grid_map_=NULL;
     std::vector<std::vector<std::vector<bool>>> grid_map_;
+    // std::vector<Eigen::Vector3i> grid_map_;
+    std::vector<int> effect_grid_;
 
     float resolution_;
 

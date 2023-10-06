@@ -4,6 +4,7 @@
 #include <nav_msgs/Path.h>
 #include <fstream>
 #include <algorithm>
+#include <execution>
 
 // #include <ros/ros.h>
 // #include <visualization_msgs/Marker.h>
@@ -29,6 +30,8 @@ void visWorld(World* world, Publisher* world_vis_pub)
 {
   if (world_vis_pub == NULL || !world->has_map_)
     return;
+  
+  auto start_time = std::chrono::steady_clock::now();
   pcl::PointCloud<pcl::PointXYZ> cloud_vis;
   for (int i = 0; i < world->idx_count_(0); i++)
   {
@@ -49,6 +52,32 @@ void visWorld(World* world, Publisher* world_vis_pub)
       }
     }
   }
+  // for(auto& grid:world->effect_grid_)
+  // {
+  //   if (!world->grid_map_[grid(0)][grid(1)][grid(2)])
+  //   {
+  //     Vector3d coor_round = world->index2coord(grid);
+  //     pcl::PointXYZ pt_add;
+  //     pt_add.x = coor_round(0);
+  //     pt_add.y = coor_round(1);
+  //     pt_add.z = coor_round(2);
+  //     cloud_vis.points.push_back(pt_add);
+  //   }
+  // }
+  // std::for_each(std::execution::par, world->grid_map_->begin(), world->grid_map_->end(), [&](const Vector3i& index) {
+  //   if (!index) {
+  //       Vector3d coor_round = world->index2coord(index);
+  //       pcl::PointXYZ pt_add;
+  //       pt_add.x = coor_round(0);
+  //       pt_add.y = coor_round(1);
+  //       pt_add.z = coor_round(2);
+  //       cloud_vis.points.push_back(pt_add);
+  //   }
+  // });
+  auto end_time = std::chrono::steady_clock::now();
+  auto time_consume = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - start_time);
+  ROS_WARN("vis_time: %f", time_consume);
+
 
   cloud_vis.width = cloud_vis.points.size();
   cloud_vis.height = 1;

@@ -240,7 +240,8 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
   for(int i = -14; i <= 14 ; i++){
     for(int j = -14; j <= 14; j++){
       Vector3d plane = {i*0.05,j*0.05,plane_bottom_};
-      Vector3d plane_transformed = rotationMatrix * plane + translation;
+      // Vector3d plane_transformed = rotationMatrix * plane + translation;
+      Vector3d plane_transformed = plane + translation;
       PointT point;
       point.x = plane_transformed(0);
       point.y = plane_transformed(1);
@@ -251,7 +252,7 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
   pass_.setInputCloud(cloud);
   pass_.setFilterFieldName("z");
-  pass_.setFilterLimits(-9999, start_pt_(2) + 2.0);
+  pass_.setFilterLimits(-9999, start_pt_(2) + 1.5);
   pass_.filter(*cloud);
 
   world_->initGridMap(*cloud);
@@ -262,10 +263,10 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
     world_->setObs(obstacle);  
   });  
 
-  std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
-    Vector3d obstacle(pt.x, pt.y, pt.z);  
-    world_->addObs(obstacle);  
-  });  
+  // std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
+  //   Vector3d obstacle(pt.x, pt.y, pt.z);  
+  //   world_->addObs(obstacle);  
+  // });  
   auto end_time2 = std::chrono::steady_clock::now();
 
 

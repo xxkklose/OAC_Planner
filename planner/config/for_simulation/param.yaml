@@ -10,7 +10,7 @@ map:
 
 planning: 
   step_size: 0.5 # 步长大小
-  h_surf_car: 0.65
+  h_surf_car: 0.5
   goal_biased: 0.15
   goal_threshold: 0.2
   sub_goal_threshold: 0.5
@@ -30,7 +30,7 @@ planning:
   max_vel: 0.05
   max_acc: 0.1
 
-  plane_bottom: -0.4
+  plane_bottom: -0.55
   planning_horizon: 4.0
   planning_time_horizon: 0
 
