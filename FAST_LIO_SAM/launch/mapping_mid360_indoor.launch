@@ -17,9 +17,9 @@
 
 	<!-- <group if="$(arg rviz)">
 	<node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find fast_lio_sam)/rviz_cfg/loam_livox.rviz" />
-	</group> 
+	</group> -->
 	
-	<include file="$(find livox_ros_driver)/launch/livox_lidar_msg.launch"/>
+	<!-- <include file="$(find livox_ros_driver)/launch/livox_lidar_msg.launch"/>
   	<include file="$(find livox_ros_driver2)/launch_ROS1/msg_MID360.launch"/> -->
 
 

@@ -250,10 +250,21 @@ void multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg
   Eigen::Quaterniond rotation(start_pose.pose.orientation.w, start_pose.pose.orientation.x,
                               start_pose.pose.orientation.y, start_pose.pose.orientation.z);
   Eigen::Matrix3d rotationMatrix = rotation.toRotationMatrix();
-  for(int i = -14; i <= 14 ; i++){
-    for(int j = -10; j <= 10; j++){
+  //rpy to rotation matrix
+  Eigen::Vector3d arm_rpy(0.53840,-0.00468,-0.00161);
+  Eigen::Matrix3d arm_matrix;
+  arm_matrix = Eigen::AngleAxisd(arm_rpy(2), Eigen::Vector3d::UnitZ()) * 
+               Eigen::AngleAxisd(arm_rpy(1), Eigen::Vector3d::UnitY()) *
+               Eigen::AngleAxisd(arm_rpy(0), Eigen::Vector3d::UnitX());
+  Eigen::Matrix3d arm_matrix_inv;
+  arm_matrix_inv = arm_matrix.transpose();
+  rotationMatrix = arm_matrix_inv * rotationMatrix;
+  
+  for(int i = -12; i <= 12 ; i++){
+    for(int j = -12; j <= 12; j++){
       Vector3d plane = {i*0.05,j*0.05,plane_bottom};
-      Vector3d plane_transformed = rotationMatrix * plane + translation;
+      Vector3d plane_transformed = plane + translation;
+      // Vector3d plane_transformed = rotationMatrix * plane + translation;
       PointT point;
       point.x = plane_transformed(0);
       point.y = plane_transformed(1);
@@ -349,11 +360,11 @@ void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* path_to_
 {
   if (path_to_control == NULL)
     return;
-  if(solution.size() > 0)
-  {
-    Vector3d first_pt(solution[solution.size()-1]->position_(0),solution[solution.size()-1]->position_(1),solution[solution.size()-1]->position_(2));
-    if((first_pt-start_pt).norm()<0.1) return;
-  }
+  // if(solution.size() > 0)
+  // {
+  //   Vector3d first_pt(solution[solution.size()-1]->position_(0),solution[solution.size()-1]->position_(1),solution[solution.size()-1]->position_(2));
+  //   if((first_pt-start_pt).norm()<0.1) return;
+  // }
 
   // Float32MultiArray msg;
   nav_msgs::Path path_to_control_msg;
@@ -586,6 +597,14 @@ void findSolution()
 void callPlanner()
 {
   static double init_time_cost = 0.0;
+  std::cout << "has_goal: " << has_goal << "\n";
+  // std::cout << "rrt_planner_start_origin: " << pf_rrt_star->origin()->position_.x() << ","
+  //                                           << pf_rrt_star->origin()->position_.y() << ","
+  //                                           << pf_rrt_star->origin()->position_.z() << "\n";
+  // std::cout << "rrt_planner_start_origin: " << pf_rrt_star->target()->position_.x() << ","
+  //                                           << pf_rrt_star->target()->position_.y() << ","
+  //                                           << pf_rrt_star->target()->position_.z() << "\n";
+
   if (!world->has_map_)
     return;
 

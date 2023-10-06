@@ -7,7 +7,8 @@ map:
 
 planning: 
   step_size: 0.6
-  h_surf_car: 0.65
+  h_surf_car: 0.5
+  goal_thre: 1.5
 
   w_fit_plane: 1.0
   w_flatness: 1000.0
@@ -23,7 +24,7 @@ planning:
   max_vel: 0.05
   max_acc: 0.1
 
-  plane_bottom: -0.4
+  plane_bottom: -0.55
   planning_horizon: 4.0
   planning_time_horizon: 0
  
