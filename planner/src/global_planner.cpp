@@ -338,7 +338,7 @@ void GlobalPlanner::pubInterpolatedPath(const vector<Node*>& solution, ros::Publ
   path_to_control_msg.header.stamp = ros::Time::now();
   outputFile_ << "当前ros时间为： " << ros::Time::now() << "\n" << "新收到路径，路径长度为： " << solution.size() << "\n";
   outputFile_ << "当前机器人三维坐标为： x: " << start_pose_.pose.position.x << " y: " << start_pose_.pose.position.y << " z: " << start_pose_.pose.position.z << "\n"; 
-  for (size_t i = 0; i < solution.size(); i--)
+  for (size_t i = 0; i < solution.size(); i++)
   {
     int k = solution.size() - i -1;
     outputFile_<<"i: " << k << "\n";
