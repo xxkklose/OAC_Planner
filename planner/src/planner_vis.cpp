@@ -31,53 +31,38 @@ void visWorld(World* world, Publisher* world_vis_pub)
   if (world_vis_pub == NULL || !world->has_map_)
     return;
   
-  auto start_time = std::chrono::steady_clock::now();
   pcl::PointCloud<pcl::PointXYZ> cloud_vis;
-  for (int i = 0; i < world->idx_count_(0); i++)
-  {
-    for (int j = 0; j < world->idx_count_(1); j++)
-    {
-      for (int k = 0; k < world->idx_count_(2); k++)
-      {
-        Vector3i index(i, j, k);
-        if (!world->grid_map_[index(0)][index(1)][index(2)])
-        {
-          Vector3d coor_round = world->index2coord(index);
-          pcl::PointXYZ pt_add;
-          pt_add.x = coor_round(0);
-          pt_add.y = coor_round(1);
-          pt_add.z = coor_round(2);
-          cloud_vis.points.push_back(pt_add);
-        }
-      }
-    }
-  }
-  // for(auto& grid:world->effect_grid_)
+  // for (int i = 0; i < world->idx_count_(0); i++)
   // {
-  //   if (!world->grid_map_[grid(0)][grid(1)][grid(2)])
+  //   for (int j = 0; j < world->idx_count_(1); j++)
   //   {
-  //     Vector3d coor_round = world->index2coord(grid);
-  //     pcl::PointXYZ pt_add;
-  //     pt_add.x = coor_round(0);
-  //     pt_add.y = coor_round(1);
-  //     pt_add.z = coor_round(2);
-  //     cloud_vis.points.push_back(pt_add);
+  //     for (int k = 0; k < world->idx_count_(2); k++)
+  //     {
+  //       Vector3i index(i, j, k);
+  //       if (!world->grid_map_[index(0)][index(1)][index(2)])
+  //       {
+  //         Vector3d coor_round = world->index2coord(index);
+  //         pcl::PointXYZ pt_add;
+  //         pt_add.x = coor_round(0);
+  //         pt_add.y = coor_round(1);
+  //         pt_add.z = coor_round(2);
+  //         cloud_vis.points.push_back(pt_add);
+  //       }
+  //     }
   //   }
   // }
-  // std::for_each(std::execution::par, world->grid_map_->begin(), world->grid_map_->end(), [&](const Vector3i& index) {
-  //   if (!index) {
-  //       Vector3d coor_round = world->index2coord(index);
-  //       pcl::PointXYZ pt_add;
-  //       pt_add.x = coor_round(0);
-  //       pt_add.y = coor_round(1);
-  //       pt_add.z = coor_round(2);
-  //       cloud_vis.points.push_back(pt_add);
-  //   }
-  // });
-  auto end_time = std::chrono::steady_clock::now();
-  auto time_consume = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - start_time);
-  ROS_WARN("vis_time: %f", time_consume);
-
+  for(auto& grid:world->effect_grid_)
+  {
+    if (!world->grid_map_[grid(0)][grid(1)][grid(2)])
+    {
+      Vector3d coor_round = world->index2coord(grid);
+      pcl::PointXYZ pt_add;
+      pt_add.x = coor_round(0);
+      pt_add.y = coor_round(1);
+      pt_add.z = coor_round(2);
+      cloud_vis.points.push_back(pt_add);
+    }
+  }
 
   cloud_vis.width = cloud_vis.points.size();
   cloud_vis.height = 1;
@@ -195,17 +180,6 @@ void visPath(const vector<Node*>& solution, Publisher* path_vis_pub, const Eigen
       pts.push_back(node->position_);
       pts_tra.push_back(node->plane_->traversability);
     }
-    // pts.push_back(start_pt);
-    // std::reverse(pts.begin(), pts.end());
-
-    // for (size_t i = 0; i < pts.size(); i++)
-    // {
-    //   if(output.is_open()){
-    //     output << "第"<<i + 1<<"个点： " << pts[i] <<std::endl;
-    //   }
-    // }
-    
-    // output.close();
 
     geometry_msgs::Point pt;
     for (const auto& coord : pts)
@@ -233,9 +207,6 @@ void visPath(const vector<Node*>& solution, Publisher* path_vis_pub, const Eigen
       Quaterniond quaternion(R);
       orientations.push_back(quaternion);
     }
-    // Quaterniond q_start(0,0,0,1);
-    // orientations.push_back(q_start);
-    // std::reverse(orientations.begin(), orientations.end());
 
     // make frame
     vector<Vector4d> frame_list = generateFrame(pts, pts_tra, orientations);

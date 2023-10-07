@@ -122,7 +122,6 @@ public:
      */
     void initGridMap(const Eigen::Vector3d &lowerbound,const Eigen::Vector3d &upperbound);
     void setObs(const Eigen::Vector3d &point);
-    void addObs(const Eigen::Vector3d &point);
     
 
     /**
@@ -196,19 +195,10 @@ public:
         return index;
     }
 
-    inline bool isGrid(const Eigen::Vector3i& coord)
-    {
-        auto it = std::find(effect_grid_.begin(), effect_grid_.end(), coord);
-        if(it != effect_grid_.end())
-            return false;
-
-        return true;
-    }
 //protected:
     // bool ***grid_map_=NULL;
     std::vector<std::vector<std::vector<bool>>> grid_map_;
-    // std::vector<Eigen::Vector3i> grid_map_;
-    std::vector<int> effect_grid_;
+    std::vector<Eigen::Vector3i> effect_grid_;
 
     float resolution_;
 
@@ -216,6 +206,8 @@ public:
 
     Eigen::Vector3d lowerbound_;
     Eigen::Vector3d upperbound_;
+
+    std::mutex world_mutex_;
 
     void clearMap();
 };

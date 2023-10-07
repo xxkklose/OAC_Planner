@@ -37,7 +37,7 @@ using PointCloud = pcl::PointCloud<PointT>;
 
 class GlobalPlanner  //全局规划类
 {
-    private:
+        private:
         std::ofstream outputFile_;
         std::ofstream keyPointDebug_;
         std::ofstream alignPointDebug_;
@@ -70,7 +70,7 @@ class GlobalPlanner  //全局规划类
 
         MotionState motionState_ = SearchMode;
 
-        std::mutex dataMutex_;
+        std::mutex gp_mutex_;
 
         pcl::PointCloud<PointT>::Ptr keyPoints_; 
         pcl::KdTreeFLANN<PointT> kdtree_;
@@ -147,6 +147,8 @@ class GlobalPlanner  //全局规划类
             double main_loop_time;
             double map_construction_time;
             double planning_time;
+            double vis_time;
+            bool updated;
         };
 
         logPlot log_data_;

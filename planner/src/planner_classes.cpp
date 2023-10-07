@@ -147,6 +147,7 @@ void World::clearMap()
     if(has_map_)
     {
         grid_map_.clear();
+        effect_grid_.clear();
     }
 }
 
@@ -246,12 +247,12 @@ bool World::collisionFree(const Node* node_start,const Node* node_end)
 
 void World::setObs(const Vector3d &point)
 {   
+    world_mutex_.lock();
     Vector3i idx=coord2index(point);
     grid_map_[idx(0)][idx(1)][idx(2)]=false;
-}
-
-void World::addObs(const Vector3d &point)
-{
+    // grid_map_.push_back(idx);
+    effect_grid_.push_back(idx);
+    world_mutex_.unlock();
 }
 
 bool World::isFree(const Vector3d &point)

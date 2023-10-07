@@ -125,59 +125,6 @@ void GlobalPlanner::rcvWaypointsCallback(const nav_msgs::Path& wp)
   }
 }
 
-// void GlobalPlanner::pointCallback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg)
-// {
-//   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-//   pcl::fromROSMsg(*cloud_registered_msg, *cloud); 
-//   std::cout<<"cloud_size: "<<cloud->size()<<"\n";
-
-//   //转换坐标
-//   Eigen::Vector3d translation(start_pose_.pose.position.x, start_pose_.pose.position.y, start_pose_.pose.position.z);
-//   Eigen::Quaterniond rotation(start_pose_.pose.orientation.w, start_pose_.pose.orientation.x,
-//                               start_pose_.pose.orientation.y, start_pose_.pose.orientation.z);
-//   Eigen::Matrix3d rotationMatrix = rotation.toRotationMatrix();
-//   for(int i = -14; i <= 14 ; i++){
-//     for(int j = -14; j <= 14; j++){
-//       Vector3d plane = {i*0.05,j*0.05,plane_bottom_};
-//       Vector3d plane_transformed = rotationMatrix * plane + translation;
-//       PointT point;
-//       point.x = plane_transformed(0);
-//       point.y = plane_transformed(1);
-//       point.z = plane_transformed(2);
-//       cloud->points.push_back(point);
-//     }
-//   }
-
-//   pass_.setInputCloud(cloud);
-//   pass_.setFilterFieldName("z");
-//   pass_.setFilterLimits(-9999, start_pt_(2) + 2.0);
-//   pass_.filter(*cloud);
-
-//   auto start_time = std::chrono::steady_clock::now();
-//   world_->initGridMap(*cloud);
-//   auto end_time1 = std::chrono::steady_clock::now();
-
-//   std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
-//     Vector3d obstacle(pt.x, pt.y, pt.z);  
-//     world_->setObs(obstacle);  
-//   });  
-
-//   std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
-//     Vector3d obstacle(pt.x, pt.y, pt.z);  
-//     world_->addObs(obstacle);  
-//   });  
-
-//   auto end_time2 = std::chrono::steady_clock::now();
-
-//   auto time1 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time1 - start_time);
-//   auto time2 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time2 - start_time);
-//   // ROS_WARN("time1: %f, time2: %f", time1.count(), time2.count());
-
-//   log_data_.map_construction_time = time1.count();
-
-//   visWorld(world_, &grid_map_vis_pub_);
-
-// }
 // void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
 //                     const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg) {
 void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg) {
@@ -263,25 +210,25 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
     world_->setObs(obstacle);  
   });  
 
-  // std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
-  //   Vector3d obstacle(pt.x, pt.y, pt.z);  
-  //   world_->addObs(obstacle);  
-  // });  
   auto end_time2 = std::chrono::steady_clock::now();
 
-
-  auto time1 = std::chrono::duration_cast<std::chrono::duration<double,std::milli>>(end_time1 - start_time);
-  auto time2 = std::chrono::duration_cast<std::chrono::duration<double,std::milli>>(end_time2 - start_time);
-  ROS_WARN("time1: %f ms, time2: %f ms", time1.count(), time2.count());
+  auto time1 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time1 - start_time);
+  auto time2 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time2 - end_time1);
+  ROS_WARN("time1: %f s, time2: %f s", time1.count(), time2.count());
 
   log_data_.map_construction_time = time1.count();
 
   visWorld(world_, &grid_map_vis_pub_);
+  auto end_time3 = std::chrono::steady_clock::now();
+  auto time_consume = std::chrono::duration_cast<std::chrono::duration<double>>(end_time3 - end_time2);
+  ROS_WARN("vis_time: %f", time_consume);
+
+  log_data_.vis_time = time_consume.count();
 }
 
 void GlobalPlanner::rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
 {
-  dataMutex_.lock();
+  gp_mutex_.lock();
   start_pt_ << pose.pose.position.x, pose.pose.position.y, pose.pose.position.z;
   start_pose_ = pose;
   if(motionState_ == SearchMode)
@@ -295,7 +242,7 @@ void GlobalPlanner::rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
       lastKeyPoint_ = start_pt_;
     }
   }
-  dataMutex_.unlock();
+  gp_mutex_.unlock();
   // save vel_direction to minimum_jerk
   Eigen::Vector3d unit_vector = {1.0, 0.0, 0.0};
   Eigen::Quaterniond tmp_quaternion(pose.pose.orientation.w, 
@@ -689,10 +636,13 @@ void GlobalPlanner::visualBox(const geometry_msgs::PoseStamped& pose){
 
 void GlobalPlanner::plotLog()
 {
-  if(log_data_.map_construction_time == 0) return;
+  if(!log_data_.updated) return;
   logFile_ << log_data_.main_loop_time << " " 
            << log_data_.map_construction_time << " " 
-           << log_data_.planning_time << "\n";
+           << log_data_.planning_time << " "
+           << log_data_.vis_time << " "
+           << "\n";
+  log_data_.updated = false;
 }
 
 void GlobalPlanner::exit()
@@ -702,6 +652,19 @@ void GlobalPlanner::exit()
     alignPointDebug_.close();
     logFile_.close();
 }
+
+// void GlobalPlanner::visGridMap()
+// {
+//   while(ros::ok())
+//   {
+//     gp_mutex_.lock();
+//     if(world_->has_map_)
+//     {
+//       visWorld(world_, &grid_map_vis_pub_);
+//     }
+//     gp_mutex_.unlock();
+//   }
+// }
 
 GlobalPlanner::GlobalPlanner(/* args */)
 {
