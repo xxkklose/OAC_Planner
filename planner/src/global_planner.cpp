@@ -232,6 +232,13 @@ void GlobalPlanner::rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
   gp_mutex_.lock();
   start_pt_ << pose.pose.position.x, pose.pose.position.y, pose.pose.position.z;
   start_pose_ = pose;
+
+  // 获取规划视野范围内的submap
+  world_->setSubCenter(start_pt_);
+  bool get_submap_flag;
+  grid_map::Length length(planning_horizon_, planning_horizon_);
+  world_->subMap_ = world_->gridMap_.getSubmap(world_->sub_map_center_, length, get_submap_flag);
+  
   if(motionState_ == SearchMode)
   {
     if(start_pt_.norm() == 0 || (lastKeyPoint_ - start_pt_).norm() > 1.0)

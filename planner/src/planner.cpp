@@ -743,8 +743,6 @@ Path PFRRTStar::planner(const int &max_iter,const double &max_time)
             &&world_->isInsideBorder(new_node->position_)//2.The position is out of the range of the grid map.
           ) 
         {
-
-            std::cout << " 进去了呢！ " << "\n";
             //Get the set of the neighbors of the new node in the tree
             vector<pair<Node*,float>> neighbor_record;
             findNearNeighbors(new_node,neighbor_record); //找到new_node附近neighbor_radius_范围内的节点,并存在neighbor_record

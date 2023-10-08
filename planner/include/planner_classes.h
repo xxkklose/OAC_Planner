@@ -202,6 +202,10 @@ public:
     // bool ***grid_map_=NULL;
     std::vector<std::vector<std::vector<bool>>> grid_map_; //TODO：还有用吗
     grid_map::GridMap gridMap_;
+    grid_map::Position sub_map_center_;
+    grid_map::GridMap subMap_;
+    inline void setSubCenter(const Eigen::Vector3d &start_pt){sub_map_center_ = grid_map::Position(start_pt(0),start_pt(1));}
+    
     std::vector<Eigen::Vector3i> effect_grid_;
 
     float resolution_;
