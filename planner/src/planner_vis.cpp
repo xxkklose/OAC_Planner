@@ -26,47 +26,31 @@ namespace visualization
 vector<Vector4d> generateFrame(const vector<Vector3d>& pts, const vector<float>& color_pts,
                                const vector<Quaterniond>& orientations);
 
-void visWorld(World* world, Publisher* world_vis_pub)
+void visWorld(World* world, Publisher* world_vis_pub, Publisher* grid_vis_pub)
 {
   if (world_vis_pub == NULL || !world->has_map_)
     return;
   
   pcl::PointCloud<pcl::PointXYZ> cloud_vis;
-  // for (int i = 0; i < world->idx_count_(0); i++)
-  // {
-  //   for (int j = 0; j < world->idx_count_(1); j++)
-  //   {
-  //     for (int k = 0; k < world->idx_count_(2); k++)
-  //     {
-  //       Vector3i index(i, j, k);
-  //       if (!world->grid_map_[index(0)][index(1)][index(2)])
-  //       {
-  //         Vector3d coor_round = world->index2coord(index);
-  //         pcl::PointXYZ pt_add;
-  //         pt_add.x = coor_round(0);
-  //         pt_add.y = coor_round(1);
-  //         pt_add.z = coor_round(2);
-  //         cloud_vis.points.push_back(pt_add);
-  //       }
-  //     }
-  //   }
-  // }
   for(auto& grid:world->effect_grid_)
   {
-    if (!world->grid_map_[grid(0)][grid(1)][grid(2)])
-    {
-      Vector3d coor_round = world->index2coord(grid);
-      pcl::PointXYZ pt_add;
-      pt_add.x = coor_round(0);
-      pt_add.y = coor_round(1);
-      pt_add.z = coor_round(2);
-      cloud_vis.points.push_back(pt_add);
-    }
+    Vector3d coor_round = world->index2coord(grid);
+    pcl::PointXYZ pt_add;
+    pt_add.x = coor_round(0);
+    pt_add.y = coor_round(1);
+    pt_add.z = coor_round(2);
+    cloud_vis.points.push_back(pt_add);
   }
 
   cloud_vis.width = cloud_vis.points.size();
   cloud_vis.height = 1;
   cloud_vis.is_dense = true;
+
+  world->gridMap_.setTimestamp(ros::Time::now().toNSec());
+  grid_map_msgs::GridMap gridMapMsg;
+  grid_map::GridMapRosConverter::toMessage(world->gridMap_, gridMapMsg);
+
+  grid_vis_pub->publish(gridMapMsg);
 
   sensor_msgs::PointCloud2 map_vis;
   pcl::toROSMsg(cloud_vis, map_vis);

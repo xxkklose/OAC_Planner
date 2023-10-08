@@ -138,6 +138,10 @@ World::World(const float &resolution):resolution_(resolution)
     lowerbound_=INF*Vector3d::Ones();
     upperbound_=-INF*Vector3d::Ones();
     idx_count_=Vector3i::Zero();
+    gridMap_.setBasicLayers({"elevation"});
+    gridMap_.add("elevation", 0.0);
+    gridMap_.setFrameId("world");
+    gridMap_.setGeometry(grid_map::Length(100.0, 100.0), 0.08); // 设置地图尺寸和分辨率
 }
 
 World::~World(){clearMap();}
@@ -146,7 +150,7 @@ void World::clearMap()
 {
     if(has_map_)
     {
-        grid_map_.clear();
+        // grid_map_.clear();
         effect_grid_.clear();
     }
 }
@@ -157,7 +161,7 @@ void World::initGridMap(const Vector3d &lowerbound,const Vector3d &upperbound)
     lowerbound_=lowerbound;
     upperbound_=upperbound;
     idx_count_=((upperbound_-lowerbound_)/resolution_).cast<int>()+Eigen::Vector3i::Ones();
-    grid_map_.resize(idx_count_(0), std::vector<std::vector<bool>>(idx_count_(1), std::vector<bool>(idx_count_(2), true)));
+    // grid_map_.resize(idx_count_(0), std::vector<std::vector<bool>>(idx_count_(1), std::vector<bool>(idx_count_(2), true)));
     has_map_=true;
 }
 
@@ -185,7 +189,7 @@ void World::initGridMap(const pcl::PointCloud<pcl::PointXYZ> &cloud)
 
     ROS_WARN("idx_count_(0): %d , idx_count_(1): %d , idx_count_(2): %d", idx_count_(0), idx_count_(1), idx_count_(2));
     
-    grid_map_.resize(idx_count_(0), std::vector<std::vector<bool>>(idx_count_(1), std::vector<bool>(idx_count_(2), true)));
+    // grid_map_.resize(idx_count_(0), std::vector<std::vector<bool>>(idx_count_(1), std::vector<bool>(idx_count_(2), true)));
 
     auto end_time2 = std::chrono::steady_clock::now();
     ROS_WARN("TimeIn1: %f , TimeIn2: %f", 
@@ -255,10 +259,26 @@ void World::setObs(const Vector3d &point)
     world_mutex_.unlock();
 }
 
+void World::setGrid(const Vector3d &point)
+{   
+    world_mutex_.lock();
+    // 将点的坐标转换为GridMap坐标
+    grid_map::Position position(point(0), point(1));
+    // 检查点是否在GridMap范围内
+    if (gridMap_.isInside(position))
+    {
+        // 将点的数据（例如高度）添加到GridMap中
+        gridMap_.atPosition("elevation", position) = point(2);
+    }
+    world_mutex_.unlock();
+}
+
 bool World::isFree(const Vector3d &point)
 {
     Vector3i idx = coord2index(point);
-    bool is_free = isInsideBorder(idx) && grid_map_[idx(0)][idx(1)][idx(2)];
+    // bool is_free = isInsideBorder(idx) && grid_map_[idx(0)][idx(1)][idx(2)];
+    grid_map::Position position(point(0), point(1));
+    bool is_free = isInsideBorder(idx) && gridMap_.atPosition("elevation", position) < point(2);
     return is_free;
 }
 
@@ -269,19 +289,23 @@ Vector3d World::coordRounding(const Vector3d & coord)
 
 bool World::project2surface(const float &x,const float &y,Vector3d* p_surface)
 {
-    bool ifsuccess=false;
+    bool ifsuccess=true;
 
     if(x>=lowerbound_(0) && x<=upperbound_(0) && y>=lowerbound_(1) && y<=upperbound_(1))
     {
-        for(float z = lowerbound_(2) ; z < upperbound_(2) ; z+=resolution_)
-        {
-            if( !isFree(x,y,z) && isFree(x,y,z+resolution_) )
-            {
-                *p_surface=Vector3d(x,y,z);
-                ifsuccess=true;
-                break;
-            }
-        }
+        // for(float z = lowerbound_(2) ; z < upperbound_(2) ; z+=resolution_)
+        // {
+        //     if( !isFree(x,y,z) && isFree(x,y,z+resolution_) )
+        //     {
+        //         *p_surface=Vector3d(x,y,z);
+        //         ifsuccess=true;
+        //         break;
+        //     }
+        // }
+        grid_map::Position position(x, y);
+        *p_surface=Vector3d(x,y,gridMap_.atPosition("elevation", position));
+        
+        if(std::isnan((*p_surface)(2))) ifsuccess=false;
     }
     return ifsuccess;
 }

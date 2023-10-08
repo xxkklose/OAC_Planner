@@ -10,6 +10,8 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <grid_map_ros/GridMapRosConverter.hpp>
+#include <grid_map_msgs/GridMap.h>
 
 namespace OAC
 {
@@ -90,7 +92,7 @@ public:
     Plane(const Eigen::Vector3d &p_surface,World* world,const double &radius,const FitPlaneArg &arg);
 };
 
-namespace visualization{void visWorld(World* world,ros::Publisher* world_vis_pub);}
+namespace visualization{void visWorld(World* world,ros::Publisher* world_vis_pub, ros::Publisher* grid_map_vis_hub);}
 /**
  * @brief Class for storing obstacles and world dimension.The information of obstacle is stored in a three-dimensional bool array.
  *        Before using the PF-RRT* algorithm,a suitable grid map must be built
@@ -98,7 +100,7 @@ namespace visualization{void visWorld(World* world,ros::Publisher* world_vis_pub
 class World
 {
 public:
-    friend void visualization::visWorld(World* world,ros::Publisher* world_vis_pub);
+    friend void visualization::visWorld(World* world,ros::Publisher* world_vis_pub, ros::Publisher* grid_map_vis_hub);
 
     //indicate whether the range of the grid map has been determined
     bool has_map_=false;
@@ -122,8 +124,9 @@ public:
      */
     void initGridMap(const Eigen::Vector3d &lowerbound,const Eigen::Vector3d &upperbound);
     void setObs(const Eigen::Vector3d &point);
-    
 
+    void setGrid(const Eigen::Vector3d &point);
+    
     /**
      * @brief Find the grid closet to the point and return the coordinate of its center
      * @param Vector3d
@@ -197,7 +200,8 @@ public:
 
 //protected:
     // bool ***grid_map_=NULL;
-    std::vector<std::vector<std::vector<bool>>> grid_map_;
+    std::vector<std::vector<std::vector<bool>>> grid_map_; //TODO：还有用吗
+    grid_map::GridMap gridMap_;
     std::vector<Eigen::Vector3i> effect_grid_;
 
     float resolution_;

@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   rviz_visual_tools
   std_msgs
   tf
+  grid_map_ros
 )
 find_package(PCL REQUIRED)
 find_package(TBB REQUIRED)
@@ -50,6 +51,6 @@ add_executable(local_obs_node
     src/planner_vis.cpp)
 
 target_link_libraries(local_obs_node 
-    ${catkin_LIBRARIES}
-    ${PCL_LIBRARIES} 
+      ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES} 
 )

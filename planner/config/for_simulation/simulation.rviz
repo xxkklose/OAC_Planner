@@ -10,8 +10,6 @@ Panels:
         - /Marker1/Namespaces1
         - /RobotModel1
         - /PointCloud21/Autocompute Value Bounds1
-        - /Pose1
-        - /PointCloud22
       Splitter Ratio: 0.4197002053260803
     Tree Height: 453
   - Class: rviz/Selection
@@ -28,7 +26,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -48,8 +46,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 2.025181293487549
-        Min Value: -0.6148186922073364
+        Max Value: 1.4826990365982056
+        Min Value: -0.5173008441925049
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -57,7 +55,7 @@ Visualization Manager:
       Color: 193; 193; 193
       Color Transformer: AxisColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -72,7 +70,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /global_planning_node/goal_vis
@@ -282,6 +280,27 @@ Visualization Manager:
         rectangle: true
       Queue Size: 100
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Class: grid_map_rviz_plugin/GridMap
+      Color: 200; 200; 200
+      Color Layer: elevation
+      Color Transformer: GridMapLayer
+      Enabled: true
+      Height Layer: elevation
+      Height Transformer: Layer
+      History Length: 1
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 10
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: GridMap
+      Show Grid Lines: true
+      Topic: /global_planning_node/grid_map
+      Unreliable: false
+      Use Rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
@@ -299,20 +318,26 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -0.27500012516975403
-      Class: rviz/TopDownOrtho
+      Class: rviz/Orbit
+      Distance: 30.69562530517578
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: -10.492177963256836
+        Y: 8.114225387573242
+        Z: -4.009592056274414
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 47.5650749206543
+      Pitch: 0.46479707956314087
       Target Frame: body
-      X: 3.8772969245910645
-      Y: 0.23460373282432556
+      Yaw: 3.356367826461792
     Saved:
       - Class: rviz/Orbit
         Distance: 79.24484252929688

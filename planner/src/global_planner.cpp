@@ -15,8 +15,10 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
     returnMode_sub_         = nh.subscribe
         ("/return_mode", 100, &GlobalPlanner::returnModeCallback, this);
 
-    grid_map_vis_pub_       = nh.advertise<sensor_msgs::PointCloud2>
+    octo_map_vis_pub_       = nh.advertise<sensor_msgs::PointCloud2>
         ("grid_map_vis", 1);
+    grid_map_vis_pub_       = nh.advertise<grid_map_msgs::GridMap>
+        ("grid_map", 1000);
     path_vis_pub_           = nh.advertise<visualization_msgs::Marker>
         ("path_vis", 40);
     goal_vis_pub_           = nh.advertise<visualization_msgs::Marker>
@@ -29,8 +31,6 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
         ("tree_tra", 40);
     path_interpolation_pub_ = nh.advertise<std_msgs::Float32MultiArray>
         ("global_path", 1000);
-    pose_pub_               = nh.advertise<geometry_msgs::PoseStamped>
-        ("robotPose", 1000);
     path_to_control_        = nh.advertise<nav_msgs::Path>
         ("path_to_control", 10);
     traj_jerk_vis_pub_      = nh.advertise<nav_msgs::Path>
@@ -207,7 +207,8 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
   std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
     Vector3d obstacle(pt.x, pt.y, pt.z);  
-    world_->setObs(obstacle);  
+    // world_->setObs(obstacle);
+    world_->setGrid(obstacle);
   });  
 
   auto end_time2 = std::chrono::steady_clock::now();
@@ -218,7 +219,7 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
   log_data_.map_construction_time = time1.count();
 
-  visWorld(world_, &grid_map_vis_pub_);
+  visWorld(world_, &octo_map_vis_pub_, &grid_map_vis_pub_);
   auto end_time3 = std::chrono::steady_clock::now();
   auto time_consume = std::chrono::duration_cast<std::chrono::duration<double>>(end_time3 - end_time2);
   ROS_WARN("vis_time: %f", time_consume);
@@ -262,7 +263,6 @@ void GlobalPlanner::rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
   pose_to_control.header.frame_id = "camera_init";
   pose_to_control.header.stamp = ros::Time::now();
   pose_to_control.pose = pose.pose;
-  // pose_pub_.publish(pose_to_control);
   visualBox(pose_to_control);
 
   return;
@@ -503,11 +503,12 @@ void GlobalPlanner::findSolution()
  *@brief On the premise that the origin and target have been specified,call PF-RRT* algorithm for planning.
  *       Accroding to the projecting results of the origin and the target,it can be divided into three cases.
  */
-void GlobalPlanner::callPlanner()
+void GlobalPlanner::callPlanner() // TODO: update callPlanner
 {
   static double init_time_cost = 0.0;
   if (!world_->has_map_)
     return;
+
 
   // The tree will expand at a certain frequency to explore the space more fully
   /*
@@ -522,7 +523,7 @@ void GlobalPlanner::callPlanner()
     timeval end;
     gettimeofday(&end, NULL);
     init_time_cost = 1000 * (end.tv_sec - start.tv_sec) + 0.001 * (end.tv_usec - start.tv_usec);
-    if (pf_rrt_star_->state() == WithoutGoal)
+        if (pf_rrt_star_->state() == WithoutGoal)
     {
       int max_iter = 550;
       double max_time = 100.0;

@@ -316,9 +316,10 @@ Vector2d PFRRTStar::getRandom2DPoint()
 
 Vector3d PFRRTStar::sampleInEllipsoid()
 {
+    // 参考informed rrt star论文
     bool disFlag=false;
-    float cmin=EuclideanDistance(node_target_,node_origin_);
-    Vector3d a_1=(node_target_->position_-node_origin_->position_)/cmin;  
+    float cmin=EuclideanDistance(node_target_,node_origin_); // 计算椭球cmin
+    Vector3d a_1=(node_target_->position_-node_origin_->position_)/cmin;  //计算起点到终点的方向向量
     RowVector3d id_t(1,0,0);
     Matrix3d M=a_1*id_t;
     JacobiSVD<MatrixXd> SVD(M,ComputeFullU|ComputeFullV);
@@ -328,10 +329,10 @@ Vector3d PFRRTStar::sampleInEllipsoid()
     A(0,0)=A(1,1)=1,A(2,2)=U.determinant()*V.determinant();
     Matrix3d C=U*A*V;
 
-    float cbest=path_.dis_+1.0f;
+    float cbest=path_.dis_+1.0f; //计算椭球cbest
 
     Matrix3d L=Matrix3d::Zero();
-    L(0,0)=cbest*0.5,L(1,1)=L(2,2)=sqrt(powf(cbest, 2)-powf(cmin,2))*0.5;
+    L(0,0)=cbest*0.5,L(1,1)=L(2,2)=sqrt(powf(cbest, 2)-powf(cmin,2))*0.5; // 计算椭球的a、b、c
 
     Vector3d point;
     while(!disFlag){
@@ -354,7 +355,7 @@ Vector3d PFRRTStar::sampleInEllipsoid()
     return point;
 }
 
-Vector2d PFRRTStar::sampleInSector()
+Vector2d PFRRTStar::sampleInSector()//TODO: 针对grid_map，所有地方做了修改吗
 {
     float sample_sector_lb_=2.0f;
 
@@ -394,7 +395,7 @@ Vector2d PFRRTStar::sampleInSector()
     return rand_point;
 }
 
-Vector2d PFRRTStar::sample()
+Vector2d PFRRTStar::sample() 
 {
     Vector2d point_sample;
     switch(planning_state_)
@@ -742,6 +743,8 @@ Path PFRRTStar::planner(const int &max_iter,const double &max_time)
             &&world_->isInsideBorder(new_node->position_)//2.The position is out of the range of the grid map.
           ) 
         {
+
+            std::cout << " 进去了呢！ " << "\n";
             //Get the set of the neighbors of the new node in the tree
             vector<pair<Node*,float>> neighbor_record;
             findNearNeighbors(new_node,neighbor_record); //找到new_node附近neighbor_radius_范围内的节点,并存在neighbor_record

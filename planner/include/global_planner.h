@@ -27,6 +27,7 @@
 using namespace std;
 using namespace std_msgs;
 using namespace Eigen;
+using namespace grid_map;
 using namespace OAC;
 using namespace OAC::visualization;
 using namespace OAC::planner;
@@ -46,6 +47,7 @@ class GlobalPlanner  //全局规划类
         // ros related 激光点云地图、中间点、位姿、返回模式、对齐模式
         ros::Subscriber map_sub_, wp_sub_, pose_sub_, returnMode_sub_, alignMode_sub_;
 
+        ros::Publisher octo_map_vis_pub_;
         ros::Publisher grid_map_vis_pub_;
         ros::Publisher path_vis_pub_;
         ros::Publisher goal_vis_pub_;
@@ -53,9 +55,7 @@ class GlobalPlanner  //全局规划类
         ros::Publisher tree_vis_pub_;
         ros::Publisher path_interpolation_pub_;
         ros::Publisher tree_tra_pub_;
-        ros::Publisher pose_pub_to_control_;
         ros::Publisher traj_jerk_vis_pub_;
-        ros::Publisher pose_pub_;
         ros::Publisher path_to_control_;
         ros::Publisher cloud_registered_pub_;
         ros::Publisher marker_pub_box_;
@@ -117,7 +117,6 @@ class GlobalPlanner  //全局规划类
         double planning_horizon_;
         double planning_time_horizon_; 
 
-
     public:
         GlobalPlanner(/* args */);
         ~GlobalPlanner();
@@ -153,6 +152,7 @@ class GlobalPlanner  //全局规划类
 
         logPlot log_data_;
 
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
     
 
