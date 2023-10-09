@@ -5,10 +5,8 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /AllMap1
         - /AllMap1/Autocompute Value Bounds1
         - /Marker1/Namespaces1
-        - /RobotModel1
         - /PointCloud21/Autocompute Value Bounds1
       Splitter Ratio: 0.4197002053260803
     Tree Height: 453
@@ -256,7 +254,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 1e+10
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -271,7 +269,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /global_planning_node/visualization_marker_box
@@ -318,7 +316,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: 0
+      Angle: 1.4749993085861206
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -328,10 +326,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 76.89966583251953
+      Scale: 95.6822280883789
       Target Frame: body
-      X: 1.7090365886688232
-      Y: 0.015053955838084221
+      X: -1.7920470237731934
+      Y: -1.2623684406280518
     Saved:
       - Class: rviz/Orbit
         Distance: 79.24484252929688

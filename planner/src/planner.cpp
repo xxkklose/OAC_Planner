@@ -114,7 +114,7 @@ void PFRRTStar::initWithGoal(const Vector3d &start_pos,const Vector3d &end_pos)
 
 void PFRRTStar::initWithoutGoal(const Vector3d &start_pos)
 {
-    curr_iter_=0;
+        curr_iter_=0;
     curr_time_=0.0;
 
     close_check_record_.clear();
@@ -144,7 +144,7 @@ void PFRRTStar::initWithoutGoal(const Vector3d &start_pos)
         node_origin_=node_origin;
         tree_.push_back(node_origin_);
     }
-}
+    }
 
 void PFRRTStar::updateNode(Node* node_input)
 {
@@ -776,7 +776,7 @@ Path PFRRTStar::planner(const int &max_iter,const double &max_time)
 
     visTree(tree_,tree_vis_pub_);
     pubTraversabilityOfTree(tree_tra_pub_);
-    
+
     return path_;
 }
 

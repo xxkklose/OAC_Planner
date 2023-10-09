@@ -193,8 +193,8 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
   Eigen::Quaterniond rotation(start_pose_.pose.orientation.w, start_pose_.pose.orientation.x,
                               start_pose_.pose.orientation.y, start_pose_.pose.orientation.z);
   Eigen::Matrix3d rotationMatrix = rotation.toRotationMatrix();
-  for(int i = -14; i <= 14 ; i++){
-    for(int j = -14; j <= 14; j++){
+  for(int i = -2; i <= 2; i++){
+    for(int j = -2; j <= 2; j++){
       Vector3d plane = {i*0.05,j*0.05,plane_bottom_};
       // Vector3d plane_transformed = rotationMatrix * plane + translation;
       Vector3d plane_transformed = plane + translation;
@@ -383,7 +383,7 @@ void GlobalPlanner::findSolution()
     ROS_WARN("findSolution to planner global");
     ROS_INFO("Starting PF-RRT* algorithm at the state of global planning");
     int max_iter = 5000;
-    double max_time = 100.0;
+    double max_time = 50.0;
 
     while (solution.type_ == Path::Empty && max_time < max_initial_time_)
     {
@@ -534,7 +534,6 @@ void GlobalPlanner::callPlanner() // TODO: update callPlanner
   if (!world_->has_map_)
     return;
 
-
   // The tree will expand at a certain frequency to explore the space more fully
   /*
     按照是否有目标点进行
@@ -549,10 +548,10 @@ void GlobalPlanner::callPlanner() // TODO: update callPlanner
     timeval end;
     gettimeofday(&end, NULL);
     init_time_cost = 1000 * (end.tv_sec - start.tv_sec) + 0.001 * (end.tv_usec - start.tv_usec);
-        if (pf_rrt_star_->state() == WithoutGoal)
+    if (pf_rrt_star_->state() == WithoutGoal)
     {
       int max_iter = 550;
-      double max_time = 100.0;
+      double max_time = 50.0;
       pf_rrt_star_->planner(max_iter, max_time);
       // ROS_INFO("Current size of tree: %d", (int)(pf_rrt_star_->tree().size()));
     }
@@ -566,14 +565,15 @@ void GlobalPlanner::callPlanner() // TODO: update callPlanner
     findSolution();
     init_time_cost = 0.0;
   }
+
+  // The expansion of tree will stop after the process of initialization takes more than 1s
+  // else
+  //   ROS_INFO("The tree is large enough.Stop expansion!Current size: %d", (int)(pf_rrt_star_->tree().size()));
+
   auto end_time = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - start_time);
 
   log_data_.planning_time = time.count();
-
-  // The expansion of tree will stop after the process of initialization takes more than 1s
-  // else
-    // ROS_INFO("The tree is large enough.Stop expansion!Current size: %d", (int)(pf_rrt_star_->tree().size()));
 }
 
 
