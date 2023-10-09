@@ -47,8 +47,10 @@ void visWorld(World* world, Publisher* world_vis_pub, Publisher* grid_vis_pub)
   cloud_vis.is_dense = true;
 
   world->subMap_.setTimestamp(ros::Time::now().toNSec());
+  // world->gridMap_.setTimestamp(ros::Time::now().toNSec());
   grid_map_msgs::GridMap gridMapMsg;
   grid_map::GridMapRosConverter::toMessage(world->subMap_, gridMapMsg);
+  // grid_map::GridMapRosConverter::toMessage(world->gridMap_, gridMapMsg);
 
   grid_vis_pub->publish(gridMapMsg);
 

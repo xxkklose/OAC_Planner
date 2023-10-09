@@ -489,19 +489,19 @@ void publish_frame_world(const ros::Publisher & pubLaserCloudFull)
             cloud->push_back(pcl::PointXYZ(laserCloudWorld->points[i].x, laserCloudWorld->points[i].y, laserCloudWorld->points[i].z));
         }
 
-        // // 创建一个半径滤波对象
-        // pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
-        // outrem.setInputCloud(cloud);
-        // outrem.setRadiusSearch(0.4);  // 设置半径搜索范围，单位为米
-        // outrem.setMinNeighborsInRadius(20);  // 设置在半径范围内的最小点数
+        // 创建一个半径滤波对象
+        pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
+        outrem.setInputCloud(cloud);
+        outrem.setRadiusSearch(0.3);  // 设置半径搜索范围，单位为米
+        outrem.setMinNeighborsInRadius(20);  // 设置在半径范围内的最小点数
         
-        // // 执行半径滤波
-        // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZ>);
-        // outrem.filter(*cloud_filtered);
+        // 执行半径滤波
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZ>);
+        outrem.filter(*cloud_filtered);
 
         sensor_msgs::PointCloud2 laserCloudmsg;
-        pcl::toROSMsg(*laserCloudWorld, laserCloudmsg);
-        // pcl::toROSMsg(*cloud_filtered, laserCloudmsg);
+        // pcl::toROSMsg(*laserCloudWorld, laserCloudmsg);
+        pcl::toROSMsg(*cloud_filtered, laserCloudmsg);
         laserCloudmsg.header.stamp = ros::Time().fromSec(lidar_end_time);
         laserCloudmsg.header.frame_id = "camera_init";
         pubLaserCloudFull.publish(laserCloudmsg);

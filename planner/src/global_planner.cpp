@@ -193,8 +193,8 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
   Eigen::Quaterniond rotation(start_pose_.pose.orientation.w, start_pose_.pose.orientation.x,
                               start_pose_.pose.orientation.y, start_pose_.pose.orientation.z);
   Eigen::Matrix3d rotationMatrix = rotation.toRotationMatrix();
-  for(int i = -2; i <= 2; i++){
-    for(int j = -2; j <= 2; j++){
+  for(int i = -14; i <= 14; i++){
+    for(int j = -10; j <= 10; j++){
       Vector3d plane = {i*0.05,j*0.05,plane_bottom_};
       // Vector3d plane_transformed = rotationMatrix * plane + translation;
       Vector3d plane_transformed = plane + translation;
