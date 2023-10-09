@@ -14,7 +14,7 @@ planning:
   goal_biased: 0.15
   goal_threshold: 0.2
   sub_goal_threshold: 0.5
-  inherit_threshold: 0.4
+  inherit_threshold: 0.3
 
   w_fit_plane: 1.0
   w_flatness: 1.0
@@ -30,11 +30,12 @@ planning:
   max_vel: 0.05
   max_acc: 0.1
 
-  plane_bottom: -0.55
-  planning_horizon: 10.0
+  plane_bottom: -0.45
+  planning_horizon: 20.0
   planning_time_horizon: 0
 
 run_time_log: true
+run_time_print: true
  
 
 

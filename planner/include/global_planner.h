@@ -140,14 +140,23 @@ class GlobalPlanner  //全局规划类
 
         // log struct
         bool run_time_log_ = false;
+        bool run_time_print_ = false;
 
         struct logPlot
         {
+            // 主要模块耗时
             double main_loop_time;
             double map_construction_time;
             double planning_time;
             double vis_time;
             bool updated;
+
+            // 回调函数耗时
+            double multi_callback_time;
+            double rcv_waypoints_callback_time;
+            double rcv_pose_callback_time;
+            double return_mode_callback_time;
+            double align_mode_callback_time;
         };
 
         logPlot log_data_;

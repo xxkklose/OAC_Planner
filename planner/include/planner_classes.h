@@ -12,6 +12,7 @@
 #include <pcl/point_types.h>
 #include <grid_map_ros/GridMapRosConverter.hpp>
 #include <grid_map_msgs/GridMap.h>
+// #include <grid_map_pcl/grid_map_pcl.hpp>
 
 namespace OAC
 {
@@ -216,6 +217,8 @@ public:
     Eigen::Vector3d upperbound_;
 
     std::mutex world_mutex_;
+
+    bool run_time_print_ = false;
 
     void clearMap();
 };

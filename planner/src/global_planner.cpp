@@ -77,6 +77,7 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
 
     // logPlot 记录
     nh.param("run_time_log", run_time_log_, false);
+    nh.param("run_time_print", run_time_print_, false);
 
     // 获取当前节点的包路径
     std::string package_path = ros::package::getPath("planner");
@@ -88,6 +89,8 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
 
     // Initialization
     world_ = new World(resolution_);
+
+    world_->run_time_print_ = run_time_print_;
   
     pf_rrt_star_ = new PFRRTStar(h_surf_car_, world_);
 
@@ -115,6 +118,7 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
 // 从rviz中获取得到目标点
 void GlobalPlanner::rcvWaypointsCallback(const nav_msgs::Path& wp)
 {
+  auto t1 = std::chrono::steady_clock::now();
   if (!world_->has_map_)
     return;
   if(motionState_ == SearchMode)
@@ -123,6 +127,10 @@ void GlobalPlanner::rcvWaypointsCallback(const nav_msgs::Path& wp)
     ROS_INFO("Receive the planning target");
     has_goal_ = true;
   }
+  auto t2 = std::chrono::steady_clock::now();
+  auto time_consume = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+  // ROS_WARN("rcvWaypointsCallback time: %f", time_consume.count());
+  log_data_.rcv_waypoints_callback_time = time_consume.count();
 }
 
 // void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
@@ -141,43 +149,44 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
   pcl::PointCloud<pcl::PointXYZ> cloud_registered;
 
   pcl::fromROSMsg(*cloud_registered_msg, cloud_registered);
-  pointcloud_map_queue_.push(cloud_registered);
-  if(pointcloud_map_queue_.size() > queue_size_){
-    pointcloud_map_queue_.pop();
-  }
-  std::queue<pcl::PointCloud<pcl::PointXYZ>> pointcloud_map_queue_copy = pointcloud_map_queue_;
-  pcl::PointCloud<pcl::PointXYZ> cloud_registered_queue;
-  //遍历队列,将队列中的点云合并
-  while(!pointcloud_map_queue_copy.empty()){
-    cloud_registered_queue += pointcloud_map_queue_copy.front();
-    pointcloud_map_queue_copy.pop();
-  }
+  // pointcloud_map_queue_.push(cloud_registered);
+  // if(pointcloud_map_queue_.size() > queue_size_){
+  //   pointcloud_map_queue_.pop();
+  // }
+  // std::queue<pcl::PointCloud<pcl::PointXYZ>> pointcloud_map_queue_copy = pointcloud_map_queue_;
+  // pcl::PointCloud<pcl::PointXYZ> cloud_registered_queue;
+  // //遍历队列,将队列中的点云合并
+  // while(!pointcloud_map_queue_copy.empty()){
+  //   cloud_registered_queue += pointcloud_map_queue_copy.front();
+  //   pointcloud_map_queue_copy.pop();
+  // }
 
-  if(pointcloud_map_queue_.size() >= 20) 
-  {
-    if(last_point_.norm() == 0 || (start_pt_ - last_point_).norm() > 0.5)
-    {
-      {
-        std::pair<PointCloud, Vector3d> tempPair = std::make_pair(cloud_registered_queue, start_pt_);
-        if(pointcloud_vector3d_queue_.size() > queue2_size_){
-          pointcloud_vector3d_queue_.pop();
-        }
-        pointcloud_vector3d_queue_.push(tempPair);
-        last_point_ = start_pt_;
-      }
-    }
-    std::queue<std::pair<PointCloud, Vector3d>> pointcloud_vector3d_queue_copy = pointcloud_vector3d_queue_;
-    PointCloud cloud_registered_vector3d_queue;
-    //遍历队列,将队列中的点云合并
-    while(!pointcloud_vector3d_queue_copy.empty()){
-      cloud_registered_vector3d_queue += pointcloud_vector3d_queue_copy.front().first;
-      pointcloud_vector3d_queue_copy.pop();
-    }
-    *cloud += cloud_registered_vector3d_queue;
-  }
-  *cloud += cloud_registered_queue;
+  // if(pointcloud_map_queue_.size() >= 20) 
+  // {
+  //   if(last_point_.norm() == 0 || (start_pt_ - last_point_).norm() > 0.5)
+  //   {
+  //     {
+  //       std::pair<PointCloud, Vector3d> tempPair = std::make_pair(cloud_registered_queue, start_pt_);
+  //       if(pointcloud_vector3d_queue_.size() > queue2_size_){
+  //         pointcloud_vector3d_queue_.pop();
+  //       }
+  //       pointcloud_vector3d_queue_.push(tempPair);
+  //       last_point_ = start_pt_;
+  //     }
+  //   }
+  //   std::queue<std::pair<PointCloud, Vector3d>> pointcloud_vector3d_queue_copy = pointcloud_vector3d_queue_;
+  //   PointCloud cloud_registered_vector3d_queue;
+  //   //遍历队列,将队列中的点云合并
+  //   while(!pointcloud_vector3d_queue_copy.empty()){
+  //     cloud_registered_vector3d_queue += pointcloud_vector3d_queue_copy.front().first;
+  //     pointcloud_vector3d_queue_copy.pop();
+  //   }
+  //   *cloud += cloud_registered_vector3d_queue;
+  // }
+  // *cloud += cloud_registered_queue;
+  *cloud += cloud_registered;
 
-  std::cout<<"cloud_size: "<<cloud->size()<<"\n";
+  // std::cout<<"cloud_size: "<<cloud->size()<<"\n";
 
   //转换坐标
   Eigen::Vector3d translation(start_pose_.pose.position.x, start_pose_.pose.position.y, start_pose_.pose.position.z);
@@ -211,24 +220,29 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
     world_->setGrid(obstacle);
   });  
 
+  // grid_map_pcl::fromPointCloud2(*pclMsg, "elevation", gridMap);
+
   auto end_time2 = std::chrono::steady_clock::now();
 
   auto time1 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time1 - start_time);
   auto time2 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time2 - end_time1);
-  ROS_WARN("time1: %f s, time2: %f s", time1.count(), time2.count());
+  if(run_time_print_) ROS_WARN("time1: %f s, time2: %f s", time1.count(), time2.count());
 
   log_data_.map_construction_time = time1.count();
 
   visWorld(world_, &octo_map_vis_pub_, &grid_map_vis_pub_);
   auto end_time3 = std::chrono::steady_clock::now();
   auto time_consume = std::chrono::duration_cast<std::chrono::duration<double>>(end_time3 - end_time2);
-  ROS_WARN("vis_time: %f", time_consume);
-
+  auto total_time = std::chrono::duration_cast<std::chrono::duration<double>>(end_time3 - start_time);
+  if(run_time_print_) ROS_WARN("vis_time: %f", time_consume);
+  if(run_time_print_) ROS_WARN("multi_callback time: %f", total_time.count());
   log_data_.vis_time = time_consume.count();
+  log_data_.multi_callback_time = total_time.count();
 }
 
 void GlobalPlanner::rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
 {
+  auto t1 = std::chrono::steady_clock::now();
   gp_mutex_.lock();
   start_pt_ << pose.pose.position.x, pose.pose.position.y, pose.pose.position.z;
   start_pose_ = pose;
@@ -238,7 +252,7 @@ void GlobalPlanner::rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
   bool get_submap_flag;
   grid_map::Length length(planning_horizon_, planning_horizon_);
   world_->subMap_ = world_->gridMap_.getSubmap(world_->sub_map_center_, length, get_submap_flag);
-  
+
   if(motionState_ == SearchMode)
   {
     if(start_pt_.norm() == 0 || (lastKeyPoint_ - start_pt_).norm() > 1.0)
@@ -271,6 +285,10 @@ void GlobalPlanner::rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
   pose_to_control.header.stamp = ros::Time::now();
   pose_to_control.pose = pose.pose;
   visualBox(pose_to_control);
+  auto t2 = std::chrono::steady_clock::now();
+  auto time_consume = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+  // ROS_WARN("rcvPoseCallback time: %f", time_consume.count());
+  log_data_.rcv_pose_callback_time = time_consume.count();
 
   return;
 }
@@ -376,7 +394,7 @@ void GlobalPlanner::findSolution()
     double dist_sum, temp_dist = 0.0;
     mj_.waypoints.push_back(start_pt_);
     Vector3d temp_pt = start_pt_;
-    ROS_WARN("solution.nodes_.size(): %d", solution.nodes_.size());
+    if(run_time_print_) ROS_WARN("solution.nodes_.size(): %d", solution.nodes_.size());
     if(solution.nodes_.size() < 2){
       if((start_pt_-target_pt_).norm() > 0.2) mj_.waypoints.push_back(target_pt_);
     }else
@@ -524,6 +542,7 @@ void GlobalPlanner::callPlanner() // TODO: update callPlanner
   auto start_time = std::chrono::steady_clock::now();
   if (!has_goal_ && init_time_cost < 1000)
   {
+    return;
     timeval start;
     gettimeofday(&start, NULL);
     pf_rrt_star_->initWithoutGoal(start_pt_); //initWithoutGoal只在这里用到 把start_pt的平面生成了
@@ -590,7 +609,6 @@ void GlobalPlanner::motionModeDetect()
 }
 
 void GlobalPlanner::pubPathToControl(ros::Publisher* path_to_control_pub){
-  // ROS_WARN("start_pt_: %f, %f, %f", start_pt_(0), start_pt_(1), start_pt_(2));
   if(path_to_control_pub == NULL)
     return;
   nav_msgs::Path path_to_control_msg;
