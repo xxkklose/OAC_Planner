@@ -54,6 +54,7 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/filters/radius_outlier_removal.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <tf/transform_datatypes.h>
 #include <tf/transform_broadcaster.h>
 #include <geometry_msgs/Vector3.h>
@@ -628,14 +629,25 @@ void publish_odometry(const ros::Publisher & pubOdomAftMapped)
     br.sendTransform( tf::StampedTransform( transform, odomAftMapped.header.stamp, "camera_init", "body" ) );
 }
 
-void publish_pose(const ros::Publisher & pubPose)
+void publish_pose(const ros::Publisher & pubPose, const ros::Publisher & pubPoseCov)
 {
     geometry_msgs::PoseStamped pose;
+    geometry_msgs::PoseWithCovarianceStamped pose_cov;
     pose.header.frame_id = "camera_init";
+    pose_cov.header.frame_id = "camera_init";
     // pose.header.stamp = ros::Time().fromSec(lidar_end_time);
     pose.header.stamp = ros::Time().now();
+    pose_cov.header.stamp = ros::Time().fromSec(lidar_end_time); //与点云话题保持一致
     set_posestamp(pose);
+    pose_cov.pose.pose.position.x = state_point.pos(0);
+    pose_cov.pose.pose.position.y = state_point.pos(1);
+    pose_cov.pose.pose.position.z = state_point.pos(2);
+    pose_cov.pose.pose.orientation.x = geoQuat.x;
+    pose_cov.pose.pose.orientation.y = geoQuat.y;
+    pose_cov.pose.pose.orientation.z = geoQuat.z;
+    pose_cov.pose.pose.orientation.w = geoQuat.w;
     pubPose.publish(pose);
+    pubPoseCov.publish(pose_cov);
 }
 
 void publish_path(const ros::Publisher pubPath)
@@ -875,6 +887,8 @@ int main(int argc, char** argv)
             ("/Odometry", 100000);
     ros::Publisher pubPose = nh.advertise<geometry_msgs::PoseStamped> 
             ("/global_planning_node/robot_pose", 100000);
+    ros::Publisher pubPoseCov = nh.advertise<geometry_msgs::PoseWithCovarianceStamped> 
+            ("/robot_pose_cov", 100000);
     ros::Publisher pubPath          = nh.advertise<nav_msgs::Path> 
             ("/path", 100000);
 //------------------------------------------------------------------------------------------------------
@@ -989,7 +1003,7 @@ int main(int argc, char** argv)
 
             /******* Publish odometry *******/
             publish_odometry(pubOdomAftMapped);
-            publish_pose(pubPose);
+            publish_pose(pubPose, pubPoseCov);
 
             /*** add the feature points to map kdtree ***/
             t3 = omp_get_wtime();
@@ -1035,7 +1049,7 @@ int main(int argc, char** argv)
         }
 
         status = ros::ok();
-        rate.sleep();
+        // rate.sleep();
     }
 
     /**************** save map ****************/

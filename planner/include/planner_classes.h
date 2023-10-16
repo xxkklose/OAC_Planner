@@ -11,7 +11,10 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <grid_map_ros/GridMapRosConverter.hpp>
+#include <grid_map_core/grid_map_core.hpp>
+#include <grid_map_ros/grid_map_ros.hpp>
 #include <grid_map_msgs/GridMap.h>
+#include <grid_map_filters/BufferNormalizerFilter.hpp>
 // #include <grid_map_pcl/grid_map_pcl.hpp>
 
 namespace OAC

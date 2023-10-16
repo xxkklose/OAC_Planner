@@ -30,12 +30,13 @@ planning:
   max_vel: 0.05
   max_acc: 0.1
 
-  plane_bottom: -0.45
+  # simulation 0.35 actual 0.45
+  plane_bottom: -0.35 
   planning_horizon: 20.0
   planning_time_horizon: 0
 
-run_time_log: true
-run_time_print: true
+run_time_log: false
+run_time_print: false
  
 
 
