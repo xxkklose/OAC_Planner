@@ -24,7 +24,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -90,7 +90,7 @@ Visualization Manager:
       Marker Topic: /global_planning_node/tree_vis
       Name: Marker
       Namespaces:
-        Tree: true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -118,6 +118,8 @@ Visualization Manager:
         All Enabled: true
         aft_mapped:
           Value: true
+        base:
+          Value: true
         base_link:
           Value: true
         body:
@@ -138,6 +140,8 @@ Visualization Manager:
             {}
         world:
           camera_init:
+            base:
+              {}
             body:
               {}
       Update Interval: 0
@@ -284,7 +288,7 @@ Visualization Manager:
       Color: 200; 200; 200
       Color Layer: elevation
       Color Transformer: GridMapLayer
-      Enabled: true
+      Enabled: false
       Height Layer: elevation
       Height Transformer: Layer
       History Length: 1
@@ -298,7 +302,7 @@ Visualization Manager:
       Topic: /global_planning_node/grid_map
       Unreliable: false
       Use Rainbow: true
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
@@ -326,10 +330,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 95.6822280883789
+      Scale: 8.433387756347656
       Target Frame: body
-      X: -1.7920470237731934
-      Y: -1.2623684406280518
+      X: 4.297181606292725
+      Y: -0.24229711294174194
     Saved:
       - Class: rviz/Orbit
         Distance: 79.24484252929688

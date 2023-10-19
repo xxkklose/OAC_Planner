@@ -95,16 +95,14 @@ bool SensorProcessorBase::updateTransformations(const ros::Time& timeStamp) {
     transformListener_.waitForTransform(sensorFrameId_, generalParameters_.mapFrameId_, timeStamp, ros::Duration(1.0));
 
     tf::StampedTransform transformTf;
-    // ROS_WARN("mapFrameId_: %s  ,  sensorFrameId_: %s", generalParameters_.mapFrameId_.c_str(), sensorFrameId_.c_str());
     transformListener_.lookupTransform(generalParameters_.mapFrameId_, sensorFrameId_, timeStamp, transformTf);
-    ROS_WARN("transformTf: %f, %f, %f", transformTf.getOrigin().x(), \ 
-            transformTf.getOrigin().y(), transformTf.getOrigin().z());
     poseTFToEigen(transformTf, transformationSensorToMap_);
-    ROS_WARN("transformationSensorToMap_: %f, %f, %f", transformationSensorToMap_.translation().x(),
-             transformationSensorToMap_.translation().y(), transformationSensorToMap_.translation().z());
 
+    ROS_WARN("generalParameters_.robotBaseFrameId_: %s", generalParameters_.robotBaseFrameId_.c_str());
     transformListener_.lookupTransform(generalParameters_.robotBaseFrameId_, sensorFrameId_, timeStamp,
                                        transformTf);  // TODO(max): Why wrong direction?
+    ROS_WARN("transformTf: %f, %f, %f", transformTf.getOrigin().x(), \
+              transformTf.getOrigin().y(), transformTf.getOrigin().z());
     Eigen::Affine3d transform;
     poseTFToEigen(transformTf, transform);
     rotationBaseToSensor_.setMatrix(transform.rotation().matrix());

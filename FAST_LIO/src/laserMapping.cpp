@@ -646,8 +646,33 @@ void publish_pose(const ros::Publisher & pubPose, const ros::Publisher & pubPose
     pose_cov.pose.pose.orientation.y = geoQuat.y;
     pose_cov.pose.pose.orientation.z = geoQuat.z;
     pose_cov.pose.pose.orientation.w = geoQuat.w;
+    auto P = kf.get_P();
+    for (int i = 0; i < 6; i ++)
+    {
+        int k = i < 3 ? i + 3 : i - 3;
+        pose_cov.pose.covariance[i*6 + 0] = P(k, 3);
+        pose_cov.pose.covariance[i*6 + 1] = P(k, 4);
+        pose_cov.pose.covariance[i*6 + 2] = P(k, 5);
+        pose_cov.pose.covariance[i*6 + 3] = P(k, 0);
+        pose_cov.pose.covariance[i*6 + 4] = P(k, 1);
+        pose_cov.pose.covariance[i*6 + 5] = P(k, 2);
+    }
     pubPose.publish(pose);
     pubPoseCov.publish(pose_cov);
+
+    //发布机器人base与camera_init、body的tf变换
+    static tf::TransformBroadcaster br;
+    tf::Transform                   transform;
+    tf::Quaternion                  q;
+    transform.setOrigin(tf::Vector3(pose_cov.pose.pose.position.x, \
+                                    pose_cov.pose.pose.position.y, \
+                                    pose_cov.pose.pose.position.z));
+    q.setW(pose_cov.pose.pose.orientation.w);
+    q.setX(pose_cov.pose.pose.orientation.x);
+    q.setY(pose_cov.pose.pose.orientation.y);
+    q.setZ(pose_cov.pose.pose.orientation.z);
+    transform.setRotation( q );
+    br.sendTransform( tf::StampedTransform( transform, pose_cov.header.stamp, "camera_init", "base_link" ) );
 }
 
 void publish_path(const ros::Publisher pubPath)
