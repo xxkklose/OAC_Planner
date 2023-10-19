@@ -28,7 +28,7 @@
   </node>
 
   <!-- Setup a transform between the world and the robot -->
-  <node pkg="tf" type="static_transform_publisher" name="robot_base_to_body" args="2.0 6.0 0 0 0.0 0 /base_link /body 100"/>
+  <!-- <node pkg="tf" type="static_transform_publisher" name="robot_base_to_body" args="2.0 6.0 0 0 0.0 0 /base_link /body 100"/> -->
 
   <!-- <node pkg="planner" type="local_obs_node" name="local_obs_node" output="screen" required = "true">
       <remap from="~map"             to="/cloud_registered"/> 

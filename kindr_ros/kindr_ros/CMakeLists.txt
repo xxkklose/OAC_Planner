@@ -5,8 +5,10 @@ set(CMAKE_CXX_STANDARD 11)
 add_compile_options(-Wall -Wextra -Wpedantic)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(kindr_DIR "/home/xxkklose/3rdParty/kindr/build")
-# set(kindr_DIR "/usr/local/share/kindr/cmake")
+if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
+  set(kindr_DIR "/usr/local/share/kindr/cmake/")
+else()
+  set(kindr_DIR "/home/xxkklose/3rdParty/kindr/cmake/")
 set(CATKIN_PACKAGE_HEADER_DEPENDENCIES
   geometry_msgs
   kindr

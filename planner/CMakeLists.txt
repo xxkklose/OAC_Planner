@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
-project(planner LANGUAGES CXX CUDA)
+project(planner LANGUAGES CXX)
 
-if(CUDA_ENABLED)
+if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "amd64.*|x86_64.*|AMD64.*")
   enable_language(CUDA)
 endif()
 

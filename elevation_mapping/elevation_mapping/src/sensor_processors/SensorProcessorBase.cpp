@@ -63,8 +63,9 @@ bool SensorProcessorBase::process(const PointCloudType::ConstPtr pointCloudInput
 
   // Update transformation at timestamp of pointcloud
   ros::Time timeStamp;
-  timeStamp.fromNSec(1000 * pointCloudInput->header.stamp);
-  if (!updateTransformations(timeStamp)) {
+  timeStamp.fromNSec(1000 * pointCloudInput->header.stamp);  //读取时间戳
+  // 查询tf坐标变换是否有效
+  if (!updateTransformations(timeStamp)) { 
     return false;
   }
 
@@ -98,11 +99,8 @@ bool SensorProcessorBase::updateTransformations(const ros::Time& timeStamp) {
     transformListener_.lookupTransform(generalParameters_.mapFrameId_, sensorFrameId_, timeStamp, transformTf);
     poseTFToEigen(transformTf, transformationSensorToMap_);
 
-    ROS_WARN("generalParameters_.robotBaseFrameId_: %s", generalParameters_.robotBaseFrameId_.c_str());
     transformListener_.lookupTransform(generalParameters_.robotBaseFrameId_, sensorFrameId_, timeStamp,
                                        transformTf);  // TODO(max): Why wrong direction?
-    ROS_WARN("transformTf: %f, %f, %f", transformTf.getOrigin().x(), \
-              transformTf.getOrigin().y(), transformTf.getOrigin().z());
     Eigen::Affine3d transform;
     poseTFToEigen(transformTf, transform);
     rotationBaseToSensor_.setMatrix(transform.rotation().matrix());
@@ -179,6 +177,7 @@ void SensorProcessorBase::removePointsOutsideLimits(PointCloudType::ConstPtr ref
     pointCloud->swap(tempPointCloud);
   }
 
+  ROS_WARN("removePointsOutsideLimits() reduced point cloud to %i points.", (int)pointClouds[0]->size());
   ROS_DEBUG("removePointsOutsideLimits() reduced point cloud to %i points.", (int)pointClouds[0]->size());
 }
 

@@ -660,13 +660,14 @@ void publish_pose(const ros::Publisher & pubPose, const ros::Publisher & pubPose
     pubPose.publish(pose);
     pubPoseCov.publish(pose_cov);
 
-    //发布机器人base与camera_init、body的tf变换
+    //发布机器人base与camera_init的tf变换
     static tf::TransformBroadcaster br;
     tf::Transform                   transform;
     tf::Quaternion                  q;
-    transform.setOrigin(tf::Vector3(pose_cov.pose.pose.position.x, \
+    //TODO: 设置base_link和body之间参数 设置到x、y、z上
+    transform.setOrigin(tf::Vector3(pose_cov.pose.pose.position.x - 0.5, \
                                     pose_cov.pose.pose.position.y, \
-                                    pose_cov.pose.pose.position.z));
+                                    pose_cov.pose.pose.position.z - 0.6));
     q.setW(pose_cov.pose.pose.orientation.w);
     q.setX(pose_cov.pose.pose.orientation.x);
     q.setY(pose_cov.pose.pose.orientation.y);

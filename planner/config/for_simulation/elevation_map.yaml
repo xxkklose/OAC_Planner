@@ -1,5 +1,5 @@
 input_sources:
-  ground_truth_cloud: # A name to identify the input source
+  lidar1: # A name to identify the input source
     type: pointcloud # Supported types: pointcloud
     # topic: /cloud_registered
     topic: /cloud_registered_body
@@ -7,21 +7,26 @@ input_sources:
     publish_on_update: true # Whether to publish the elevation map after a callback from this source.
     sensor_processor:
       type: laser
+      apply_voxelgrid_filter: false
+      voxelgrid_filter_size: 0.03
+      min_radius: 0.020
+      beam_angle: 0.0006
+      beam_constant: 0.0015
 
 # point_cloud_topic: /cloud_registered
 
 map_frame_id: "camera_init"
 robot_base_frame_id: "base_link"
 robot_pose_with_covariance_topic: "/robot_pose_cov"
-track_point_frame_id: "camera_init"
+track_point_frame_id: "body"
 track_point_x: 0.0
 track_point_y: 0.0
 track_point_z: 0.0
 
-# min_update_rate: 2.0
-# time_tolerance: 0.0
-# fusedMapPublishingRate: 1.0
-# visibility_cleanup_rate: 1.0
+min_update_rate: 0.5
+time_tolerance: 0.0
+fusedMapPublishingRate: 0.5
+visibility_cleanup_rate: 0.5
 
 length_in_x: 20.0
 length_in_y: 20.0
@@ -50,15 +55,13 @@ multi_height_noise: 0.00002
 # init_submao_variance: 0.01
 # target_frame_init_submap: /footprint
 
-sensor_processor:
-  type: laser
+# sensor_processor:
+#   type: laser
   #ignore_points_above: 15
   #ignore_points_below: -1.0
   #apply_voxelgrid_filter: true
   #voxelgrid_filter_size: 0.05
-  min_radius: 0.020
-  beam_angle: 0.0006
-  beam_constant: 0.0015
+
 
 robot_motion_map_update:
   covariance_scale: 1.0
