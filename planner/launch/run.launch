@@ -30,7 +30,7 @@
       <param name="map/local_y_u"       value="1.8"/>
       <param name="map/local_z_l"       value="-0.5"/>
       <param name="map/local_z_u"       value="0.4"/>
-  </node>
+  </node>run_time_log: false
 
   <node pkg="gpr" type="gpr_path" name="gpr_path" output="screen" required="true">
       <param name="file/cfg_path" type="string" value="$(find gpr)/config/hyperparam.txt"/>
@@ -38,7 +38,7 @@
     <!-- <node name="local_planner" pkg="local_planner" type="local_planner.py" launch-prefix="gnome-terminal -x">
   </node> -->
 
-  <include file="$(find livox_ros_driver)/launch/livox_lidar_msg.launch"/>
+  <!-- <include file="$(find livox_ros_driver)/launch/livox_lidar_msg.launch"/> -->
   <include file="$(find livox_ros_driver2)/launch_ROS1/msg_MID360.launch"/>
 
 

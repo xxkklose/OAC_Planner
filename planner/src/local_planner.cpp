@@ -137,8 +137,6 @@ bool LocalPlanner::can_adjust_robot_direction(const Eigen::Vector3d& goal, const
     const double yawrate = std::min(std::max(angle_to_goal, min_yaw_rate_), max_yaw_rate_);
     std::vector<State> traj = generate_trajectory(yawrate, goal, goal_quat);
 
-    if()
-
     return true;
 }
 

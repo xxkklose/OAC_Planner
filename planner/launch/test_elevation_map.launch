@@ -50,5 +50,8 @@
       <rosparam command="load" file="$(find planner)/config/local_planner_param.yaml"/>
   </node>
 
+    <!-- <include file="$(find livox_ros_driver)/launch/livox_lidar_msg.launch"/> -->
+  <include file="$(find livox_ros_driver2)/launch_ROS1/msg_MID360.launch"/>
+
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find planner)/config/for_simulation/simulation.rviz" required="true"/>
 </launch>

@@ -151,7 +151,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: AxisColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -166,7 +166,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /ob_draw
@@ -251,7 +251,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 1e+10
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -266,7 +266,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /global_planning_node/visualization_marker_box
@@ -281,7 +281,7 @@ Visualization Manager:
       Color: 200; 200; 200
       Color Layer: elevation
       Color Transformer: GridMapLayer
-      Enabled: false
+      Enabled: true
       Height Layer: elevation
       Height Transformer: Layer
       History Length: 1
@@ -295,14 +295,14 @@ Visualization Manager:
       Topic: /global_planning_node/grid_map
       Unreliable: false
       Use Rainbow: true
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Class: grid_map_rviz_plugin/GridMap
       Color: 200; 200; 200
       Color Layer: elevation
       Color Transformer: GridMapLayer
-      Enabled: true
+      Enabled: false
       Height Layer: elevation
       Height Transformer: GridMapLayer
       History Length: 1
@@ -316,7 +316,7 @@ Visualization Manager:
       Topic: /elevation_mapping/elevation_map_raw
       Unreliable: false
       Use Rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -372,10 +372,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 108.03849029541016
+      Scale: 100.48054504394531
       Target Frame: body
-      X: 4.021486282348633
-      Y: 0.13109660148620605
+      X: 0.0781988725066185
+      Y: 0.137933611869812
     Saved:
       - Class: rviz/Orbit
         Distance: 79.24484252929688

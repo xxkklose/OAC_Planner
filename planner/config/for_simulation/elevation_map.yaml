@@ -12,6 +12,8 @@ input_sources:
       min_radius: 0.020
       beam_angle: 0.0006
       beam_constant: 0.0015
+      ignore_points_above: 2.5
+      ignore_points_below: -0.5
 
 # point_cloud_topic: /cloud_registered
 
@@ -41,8 +43,8 @@ multi_height_noise: 0.00002
 # min_horizontal_variance: 0.0001
 # max_horizontal_variance: 10000.0
 # underlying_map_topic: ""
-# enable_visibility_cleanup: false
-# enable_continuous_cleanup: false
+enable_visibility_cleanup: true
+enable_continuous_cleanup: false
 # scanning_duration: 1.0
 # increase_height_alpha: 0.0
 # masked_replace_service_make_layer_name: ""

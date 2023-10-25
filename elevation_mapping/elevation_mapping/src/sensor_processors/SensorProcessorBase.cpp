@@ -177,7 +177,6 @@ void SensorProcessorBase::removePointsOutsideLimits(PointCloudType::ConstPtr ref
     pointCloud->swap(tempPointCloud);
   }
 
-  ROS_WARN("removePointsOutsideLimits() reduced point cloud to %i points.", (int)pointClouds[0]->size());
   ROS_DEBUG("removePointsOutsideLimits() reduced point cloud to %i points.", (int)pointClouds[0]->size());
 }
 

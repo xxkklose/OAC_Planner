@@ -18,7 +18,7 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
     octo_map_vis_pub_       = nh.advertise<sensor_msgs::PointCloud2>
         ("grid_map_vis", 1);
     grid_map_vis_pub_       = nh.advertise<grid_map_msgs::GridMap>
-        ("grid_map", 1000);
+        ("grid_map", 1);
     path_vis_pub_           = nh.advertise<visualization_msgs::Marker>
         ("path_vis", 40);
     goal_vis_pub_           = nh.advertise<visualization_msgs::Marker>
@@ -197,7 +197,7 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
     for(int j = -10; j <= 10; j++){
       Vector3d plane = {i*0.05,j*0.05,plane_bottom_};
       // Vector3d plane_transformed = rotationMatrix * plane + translation;
-      Vector3d plane_transformed = plane + translation;
+      Vector3d plane_transformed = plane;
       PointT point;
       point.x = plane_transformed(0);
       point.y = plane_transformed(1);
@@ -208,7 +208,7 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
   pass_.setInputCloud(cloud);
   pass_.setFilterFieldName("z");
-  pass_.setFilterLimits(-9999, start_pt_(2) + 1.5);
+  pass_.setFilterLimits(-9999, start_pt_(2) + 2);
   pass_.filter(*cloud);
 
   world_->initGridMap(*cloud);
