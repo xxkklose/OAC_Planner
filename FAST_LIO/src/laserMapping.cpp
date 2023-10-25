@@ -305,7 +305,7 @@ void livox_pcl_cbk(const livox_ros_driver::CustomMsg::ConstPtr &msg)
     mtx_buffer.lock();
     double preprocess_start_time = omp_get_wtime();
     scan_count ++;
-    if (msg->header.stamp.toSec() < last_timestamp_lidar)
+    if (msg->header.stamp.toSec() + 0.01 < last_timestamp_lidar)
     {
         ROS_ERROR("lidar loop back, clear buffer");
         lidar_buffer.clear();
