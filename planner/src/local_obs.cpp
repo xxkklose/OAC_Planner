@@ -86,7 +86,7 @@ void rcvlivoxCallBack(const sensor_msgs::PointCloud2& livox_points)
     geometry_msgs::PointStamped trans_point;
 
     listener_ptr->transformPoint("camera_init", origin_point, trans_point);
-    // std::cout << trans_point << std::endl;
+    std::cout << trans_point << std::endl;
 
     pcl::PointXYZ _pt;
     if (!(-1.2 < pt.x && pt.x < 0.4 && -0.4 < pt.y && pt.y < 0.4))

@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   tf
   grid_map_ros
+  livox_ros_driver
 )
 find_package(PCL REQUIRED)
 find_package(TBB REQUIRED)
@@ -53,4 +54,17 @@ add_executable(local_obs_node
 target_link_libraries(local_obs_node 
       ${catkin_LIBRARIES}
   ${PCL_LIBRARIES} 
+)
+
+add_executable(local_planning_node
+    src/local_planner_node.cpp
+    src/planner.cpp
+    src/planner_classes.cpp
+    src/planner_vis.cpp
+    src/local_planner.cpp
+    )
+
+target_link_libraries(local_planning_node
+    ${catkin_LIBRARIES}
+    ${PCL_LIBRARIES} 
 )

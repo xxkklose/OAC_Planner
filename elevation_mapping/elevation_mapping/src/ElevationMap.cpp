@@ -562,6 +562,8 @@ bool ElevationMap::publishFusedElevationMap() {
   grid_map_msgs::GridMap message;
   grid_map::GridMapRosConverter::toMessage(fusedMapCopy, message);
   elevationMapFusedPublisher_.publish(message);
+  size_t size = message.data.size();
+  ROS_WARN("message.size: %zu", size);
   ROS_DEBUG("Elevation map (fused) has been published.");
   return true;
 }

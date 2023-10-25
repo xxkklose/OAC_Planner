@@ -45,10 +45,10 @@
   <!-- <node pkg="gpr" type="gpr_path" name="gpr_path" output="screen" required="true">
       <param name="file/cfg_path" type="string" value="$(find gpr)/config/hyperparam.txt"/>
   </node> -->
-    <!-- <node name="local_planner" pkg="local_planner" type="local_planner.py" launch-prefix="gnome-terminal -x">
-  </node> -->
-
-  <!-- <include file="/home/beihang705/3rdParty/livox_ros_driver2/ws_livox/src/livox_ros_driver2/launch_ROS1/msg_MID360.launch"/> -->
+  <node name="local_planning_node" pkg="planner" type="local_planning_node" >
+      <remap from="~local_map"             to="/elevation_mapping/elevation_map_raw"/>
+      <rosparam command="load" file="$(find planner)/config/local_planner_param.yaml"/>
+  </node>
 
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find planner)/config/for_simulation/simulation.rviz" required="true"/>
 </launch>

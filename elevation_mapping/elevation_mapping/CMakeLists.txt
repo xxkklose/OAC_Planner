@@ -9,6 +9,7 @@ if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
   set(kindr_DIR "/usr/local/share/kindr/cmake/")
 else()
   set(kindr_DIR "/home/xxkklose/3rdParty/kindr/cmake/")
+endif()
 
 set(
   CATKIN_PACKAGE_DEPENDENCIES 

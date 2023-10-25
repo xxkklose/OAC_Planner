@@ -364,10 +364,10 @@ void GlobalPlanner::pubInterpolatedPath(const vector<Node*>& solution, ros::Publ
  */
 void GlobalPlanner::findSolution()
 {
-  printf("=========================================================================\n");
-  ROS_INFO("Start calling PF-RRT*");
+  // printf("=========================================================================\n");
+  // ROS_INFO("Start calling PF-RRT*");
   Path solution = Path();
-  ROS_WARN("findSolution to initWithGoal");
+  // ROS_WARN("findSolution to initWithGoal");
   pf_rrt_star_->initWithGoal(start_pt_, target_pt_);
 
   // Case1: The PF-RRT* can't work at when the origin can't be project to surface
@@ -380,8 +380,7 @@ void GlobalPlanner::findSolution()
   
   else if (pf_rrt_star_->state() == Global)
   {
-    ROS_WARN("findSolution to planner global");
-    ROS_INFO("Starting PF-RRT* algorithm at the state of global planning");
+    // ROS_INFO("Starting PF-RRT* algorithm at the state of global planning");
     int max_iter = 5000;
     double max_time = 50.0;
 
@@ -447,7 +446,7 @@ void GlobalPlanner::findSolution()
     // visTrajectory(mj_.waypoints, coefficientMatrix, mj_.timeVector, mj_.traj_jerk_vis_pub_);
 
     if (!solution.nodes_.empty()){
-      ROS_INFO("Get a global path!");
+      // ROS_INFO("Get a global path!");
       pubInterpolatedPath(solution.nodes_, &path_to_control_);
     }
     else
@@ -457,7 +456,7 @@ void GlobalPlanner::findSolution()
   //       will try to find a temporary target for transitions.
   else
   {
-    ROS_INFO("Starting PF-RRT* algorithm at the state of rolling planning");
+    // ROS_INFO("Starting PF-RRT* algorithm at the state of rolling planning");
     int max_iter = 1500;
     double max_time = 100.0;
 
@@ -496,14 +495,14 @@ void GlobalPlanner::findSolution()
 
     if (!solution.nodes_.empty())
     {
-      ROS_INFO("Get a sub path!");
+      // ROS_INFO("Get a sub path!");
       pubInterpolatedPath(solution.nodes_, &path_to_control_);
     }
     else
       ROS_WARN("No solution found!");
   }
-  ROS_INFO("End calling PF-RRT*");
-  printf("=========================================================================\n");
+  // ROS_INFO("End calling PF-RRT*");
+  // printf("=========================================================================\n");
 
   // pubInterpolatedPath(solution.nodes_, &path_interpolation_pub);
   visPath(solution.nodes_, &path_vis_pub_, start_pt_);
@@ -561,7 +560,7 @@ void GlobalPlanner::callPlanner() // TODO: update callPlanner
   // If there is a specified moving target,call PF-RRT* to find a solution
   else if (has_goal_)
   {
-    ROS_WARN("callPlanner to findSolution");
+    // ROS_WARN("callPlanner to findSolution");
     findSolution();
     init_time_cost = 0.0;
   }
