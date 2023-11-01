@@ -1,0 +1,20 @@
+hz: 10.0
+target_velocity: 1.0
+max_velocity_: 1.0
+min_velocity: 0.0
+max_yaw_rate: 1.0
+min_yaw_rate: 0.0
+max_acceleration: 1.0
+max_deceleration: 1.0
+max_d_yaw_rate: 1.0
+angle_resolution: 0.1
+predict_time: 3.0
+dt: 0.1
+velocity_samples: 3
+yaw_rate_samples: 20
+dist_to_goal_th: 0.1 
+angle_to_goal_th: 0.1
+
+use_livox_scan_as_input: true
+use_scan_as_input: false
+use_local_map_as_input: false

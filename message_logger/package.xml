@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+
+<package format="2">
+
+  <name>message_logger</name>
+  <version>0.2.16</version>
+  <description>The message logger package</description>
+
+  <author email="cgehring@anybotics.com">Christian Gehring</author>
+  <maintainer email="pleemann@anybotics.com">Philipp Leemann</maintainer>
+  <maintainer email="rdiethelm@anybotics.com">Remo Diethelm</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+<!--   <build_depend>cmake_clang_tools</build_depend> -->
+
+<!--   <depend>anymal_sentry_native</depend> -->
+  <depend>roscpp</depend>
+<!--   <depend>sentry_native</depend> -->
+
+<!--   <test_depend>cmake_code_coverage</test_depend> -->
+  <test_depend>gtest</test_depend>
+
+</package>

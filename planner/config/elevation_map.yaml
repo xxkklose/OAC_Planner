@@ -1,0 +1,112 @@
+input_sources:
+  lidar1: # A name to identify the input source
+    type: pointcloud # Supported types: pointcloud
+    # topic: /cloud_registered
+    topic: /cloud_registered_body
+    queue_size: 1
+    publish_on_update: true # Whether to publish the elevation map after a callback from this source.
+    sensor_processor:
+      type: laser
+      apply_voxelgrid_filter: false
+      voxelgrid_filter_size: 0.03
+      min_radius: 0.020
+      beam_angle: 0.0006
+      beam_constant: 0.0015
+      ignore_points_above: 2.5
+      ignore_points_below: -0.5
+
+# point_cloud_topic: /cloud_registered
+
+map_frame_id: "camera_init"
+robot_base_frame_id: "base_link"
+robot_pose_with_covariance_topic: "/robot_pose_cov"
+track_point_frame_id: "body"
+track_point_x: 0.0
+track_point_y: 0.0
+track_point_z: 0.0
+
+min_update_rate: 0.5
+time_tolerance: 0.0
+fusedMapPublishingRate: 0.5
+visibility_cleanup_rate: 0.5
+
+length_in_x: 20.0
+length_in_y: 20.0
+position_x: 0.0
+position_y: 0.0
+resolution: 0.05
+
+min_variance: 0.0001
+max_variance: 10000.0
+mahalanobis_distance_threshold: 2.5
+multi_height_noise: 0.00002
+# min_horizontal_variance: 0.0001
+# max_horizontal_variance: 10000.0
+# underlying_map_topic: ""
+enable_visibility_cleanup: true
+enable_continuous_cleanup: false
+# scanning_duration: 1.0
+# increase_height_alpha: 0.0
+# masked_replace_service_make_layer_name: ""
+
+# initaialize_elevation_map: false
+# initialization_method: 0
+# length_in_x_init_submap: 1.2
+# length_in_y_init_submap: 1.8
+# init_submap_height_offset: 0.0
+# init_submao_variance: 0.01
+# target_frame_init_submap: /footprint
+
+# sensor_processor:
+#   type: laser
+  #ignore_points_above: 15
+  #ignore_points_below: -1.0
+  #apply_voxelgrid_filter: true
+  #voxelgrid_filter_size: 0.05
+
+
+robot_motion_map_update:
+  covariance_scale: 1.0
+
+postprocessor_pipeline: # set by postprocessor_pipeline_name
+  # Fill holes in the map with inpainting.
+  - name: inpaint
+    type: gridMapCv/InpaintFilter
+    params:
+      input_layer: elevation
+      output_layer: elevation_inpainted
+      radius: 0.05
+
+  # Compute Surface normals
+  - name: surface_normals
+    type: gridMapFilters/NormalVectorsFilter
+    params:
+      input_layer: elevation_inpainted
+      output_layers_prefix: normal_vectors_
+      radius: 0.1
+      normal_vector_positive_axis: z
+
+  #  Delete layers that are not needed to reduce bandwidth
+  #  - name: delete_original_layers
+  #    type: gridMapFilters/DeletionFilter
+  #    params:
+  #      layers: [lowest_scan_point,sensor_x_at_lowest_scan, sensor_y_at_lowest_scan, sensor_z_at_lowest_scan] # List of layers.
+
+grid_map_visualizations:
+
+  - name: elevation_cloud
+    type: point_cloud
+    params:
+     layer: elevation
+
+  - name: sigma_cloud
+    type: point_cloud
+    params:
+     layer: two_sigma_bound
+
+  - name: map_region
+    type: map_region
+    params:
+     color: 16777215
+     line_width: 0.003
+
