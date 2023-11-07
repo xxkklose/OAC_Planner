@@ -3,18 +3,26 @@
 using namespace OAC::visualization;
 using namespace OAC::planner;
 
+GlobalPlanner::GlobalPlanner(/* args */)
+{
+}
+
+GlobalPlanner::~GlobalPlanner()
+{
+}
+
 void GlobalPlanner::init(ros::NodeHandle& nh)
 {
     // ros topic
     nh.param("ros_topic/pose_topic", pose_sub_topic_, std::string("/global_planning_node/robot_pose")); // fast_lio 的位姿
-
-      // map_sub = nh.subscribe("map", 1, pointCallback, ros::TransportHints().tcpNoDelay());
+    nh.param("ros_topic/map_topic", map_sub_topic_, std::string("/livox/lidar")); // livox 的点云
     map_sub_                = nh.subscribe
-        ("map", 1, &GlobalPlanner::multi_callback, this, ros::TransportHints().tcpNoDelay());
+        (map_sub_topic_, 1, &GlobalPlanner::multi_callback, this, ros::TransportHints().tcpNoDelay());
     wp_sub_                 = nh.subscribe
         ("waypoints", 1, &GlobalPlanner::rcvWaypointsCallback, this);
     pose_sub_               = nh.subscribe
-        (pose_sub_topic_, 1, &GlobalPlanner::rcvPoseCallback, this);
+        // (pose_sub_topic_, 1, &GlobalPlanner::rcvPoseCallback, this);
+        (pose_sub_topic_, 1, &GlobalPlanner::rcvPoseCallback2, this);
     returnMode_sub_         = nh.subscribe
         ("/return_mode", 100, &GlobalPlanner::returnModeCallback, this);
 
@@ -35,13 +43,15 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
     path_interpolation_pub_ = nh.advertise<std_msgs::Float32MultiArray>
         ("global_path", 1000);
     path_to_control_        = nh.advertise<nav_msgs::Path>
-        ("path_to_control", 10);
+        ("path_to_local", 10);
     traj_jerk_vis_pub_      = nh.advertise<nav_msgs::Path>
         ("trajectory_path", 40);
     cloud_registered_pub_   = nh.advertise<sensor_msgs::PointCloud2>
         ("cloud_registered_surround", 100);
     marker_pub_box_         = nh.advertise<visualization_msgs::MarkerArray>
         ("visualization_marker_box", 10);
+    sub_map_pub_            = nh.advertise<grid_map_msgs::GridMap>
+        ("sub_map", 1);
 
     // 平面拟合参数
     nh.param("planning/w_fit_plane", fit_plane_arg_.w_total_, 0.4);
@@ -136,12 +146,8 @@ void GlobalPlanner::rcvWaypointsCallback(const nav_msgs::Path& wp)
   log_data_.rcv_waypoints_callback_time = time_consume.count();
 }
 
-// void multi_callback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg,
-//                     const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg) {
 void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg) {
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-  // pcl::fromROSMsg(*surfmap_msg, *cloud);
-  // std::cout<<"cloud size: "<<cloud->size()<<std::endl;
   auto start_time = std::chrono::steady_clock::now();
 
   sensor_msgs::PointCloud2 msg;
@@ -152,44 +158,7 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
   pcl::PointCloud<pcl::PointXYZ> cloud_registered;
 
   pcl::fromROSMsg(*cloud_registered_msg, cloud_registered);
-  // pointcloud_map_queue_.push(cloud_registered);
-  // if(pointcloud_map_queue_.size() > queue_size_){
-  //   pointcloud_map_queue_.pop();
-  // }
-  // std::queue<pcl::PointCloud<pcl::PointXYZ>> pointcloud_map_queue_copy = pointcloud_map_queue_;
-  // pcl::PointCloud<pcl::PointXYZ> cloud_registered_queue;
-  // //遍历队列,将队列中的点云合并
-  // while(!pointcloud_map_queue_copy.empty()){
-  //   cloud_registered_queue += pointcloud_map_queue_copy.front();
-  //   pointcloud_map_queue_copy.pop();
-  // }
-
-  // if(pointcloud_map_queue_.size() >= 20) 
-  // {
-  //   if(last_point_.norm() == 0 || (start_pt_ - last_point_).norm() > 0.5)
-  //   {
-  //     {
-  //       std::pair<PointCloud, Vector3d> tempPair = std::make_pair(cloud_registered_queue, start_pt_);
-  //       if(pointcloud_vector3d_queue_.size() > queue2_size_){
-  //         pointcloud_vector3d_queue_.pop();
-  //       }
-  //       pointcloud_vector3d_queue_.push(tempPair);
-  //       last_point_ = start_pt_;
-  //     }
-  //   }
-  //   std::queue<std::pair<PointCloud, Vector3d>> pointcloud_vector3d_queue_copy = pointcloud_vector3d_queue_;
-  //   PointCloud cloud_registered_vector3d_queue;
-  //   //遍历队列,将队列中的点云合并
-  //   while(!pointcloud_vector3d_queue_copy.empty()){
-  //     cloud_registered_vector3d_queue += pointcloud_vector3d_queue_copy.front().first;
-  //     pointcloud_vector3d_queue_copy.pop();
-  //   }
-  //   *cloud += cloud_registered_vector3d_queue;
-  // }
-  // *cloud += cloud_registered_queue;
   *cloud += cloud_registered;
-
-  // std::cout<<"cloud_size: "<<cloud->size()<<"\n";
 
   //转换坐标
   Eigen::Vector3d translation(start_pose_.pose.position.x, start_pose_.pose.position.y, start_pose_.pose.position.z);
@@ -219,8 +188,9 @@ void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
   std::for_each(std::execution::par, cloud->begin(), cloud->end(), [&](const auto& pt) {  
     Vector3d obstacle(pt.x, pt.y, pt.z);  
-    // world_->setObs(obstacle);
-    world_->setGrid(obstacle);
+    if(!(abs(pt.x - start_pt_.x()) < 2.0 && abs(pt.y - start_pt_.y()) < 2.0 && abs(pt.z - start_pt_.z()) < 0.4))
+      // world_->setObs(obstacle);
+      world_->setGrid(obstacle);
   });  
 
   // grid_map_pcl::fromPointCloud2(*pclMsg, "elevation", gridMap);
@@ -277,11 +247,6 @@ void GlobalPlanner::rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
   
   // 将四元数转换为旋转矩阵
   Eigen::Matrix3d rotationMatrix = tmp_quaternion.toRotationMatrix();
-  // 转换到camera_init坐标系下
-  // mj_.start_vel = rotationMatrix * (0.01*unit_vector);
-  // mj_.start_acc = rotationMatrix * (0.01*unit_vector);
-  // // mj_.start_vel = rotationMatrix * unit_vector;
-  // // mj_.start_acc = rotationMatrix * unit_vector;
 
   geometry_msgs::PoseStamped pose_to_control;
   pose_to_control.header.frame_id = "camera_init";
@@ -290,11 +255,63 @@ void GlobalPlanner::rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
   visualBox(pose_to_control);
   auto t2 = std::chrono::steady_clock::now();
   auto time_consume = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-  // ROS_WARN("rcvPoseCallback time: %f", time_consume.count());
   log_data_.rcv_pose_callback_time = time_consume.count();
 
-  return;
 }
+
+void GlobalPlanner::rcvPoseCallback2(const nav_msgs::Path& pose)
+{
+  auto t1 = std::chrono::steady_clock::now();
+  gp_mutex_.lock();
+  // start_pt_ << pose.pose.position.x, pose.pose.position.y, pose.pose.position.z;
+  start_pt_ << pose.poses.back().pose.position.x, pose.poses.back().pose.position.y, pose.poses.back().pose.position.z;
+  start_pose_ = pose.poses.back();
+
+  // 获取规划视野范围内的submap
+  world_->setSubCenter(start_pt_);
+  bool get_submap_flag;
+  grid_map::Length length(planning_horizon_, planning_horizon_);
+  world_->subMap_ = world_->gridMap_.getSubmap(world_->sub_map_center_, length, get_submap_flag);
+  grid_map_msgs::GridMap msg;
+  grid_map::GridMapRosConverter::toMessage(world_->subMap_, msg);
+  msg.info.header.frame_id = "camera_init";
+  msg.info.header.stamp = ros::Time::now();
+  sub_map_pub_.publish(msg);
+
+  if(motionState_ == SearchMode)
+  {
+    if(start_pt_.norm() == 0 || (lastKeyPoint_ - start_pt_).norm() > 1.0)
+    {
+      keyPointDebug_ << "处于搜索模式，插入关键节点： " << "\n";
+      keyPointDebug_ << "三维坐标为： x: " << start_pt_.x() << "  y: " << start_pt_.y() << "  z: " << start_pt_.z() << "\n";
+      PointT point(start_pt_.x(), start_pt_.y(), start_pt_.z());
+      keyPoints_->points.push_back(point);
+      lastKeyPoint_ = start_pt_;
+    }
+  }
+  gp_mutex_.unlock();
+  // save vel_direction to minimum_jerk
+  Eigen::Vector3d unit_vector = {1.0, 0.0, 0.0};
+  Eigen::Quaterniond tmp_quaternion(pose.poses.back().pose.orientation.w, 
+                                    pose.poses.back().pose.orientation.x, 
+                                    pose.poses.back().pose.orientation.y, 
+                                    pose.poses.back().pose.orientation.z);
+  
+  // 将四元数转换为旋转矩阵
+  Eigen::Matrix3d rotationMatrix = tmp_quaternion.toRotationMatrix();
+
+  geometry_msgs::PoseStamped pose_to_control;
+  pose_to_control.header.frame_id = "camera_init";
+  pose_to_control.header.stamp = ros::Time::now();
+  pose_to_control.pose = pose.poses.back().pose;
+  visualBox(pose_to_control);
+  auto t2 = std::chrono::steady_clock::now();
+  auto time_consume = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+  log_data_.rcv_pose_callback_time = time_consume.count();
+
+}
+
+
 void GlobalPlanner::returnModeCallback(const std_msgs::String& msg)
 {
   if(msg.data == "true") motionState_ = ReturnMode;
@@ -610,24 +627,6 @@ void GlobalPlanner::motionModeDetect()
   }
 }
 
-void GlobalPlanner::pubPathToControl(ros::Publisher* path_to_control_pub){
-  if(path_to_control_pub == NULL)
-    return;
-  nav_msgs::Path path_to_control_msg;
-  path_to_control_msg.header.frame_id = "camera_init";
-  path_to_control_msg.header.stamp = ros::Time::now();
-  for(int i = 0; i < mj_.waypoints.size(); i++){
-    geometry_msgs::PoseStamped pose;
-    pose.header.frame_id = "camera_init";
-    pose.header.stamp = ros::Time::now();
-    pose.pose.position.x = mj_.waypoints[i](0);
-    pose.pose.position.y = mj_.waypoints[i](1);
-    pose.pose.position.z = mj_.waypoints[i](2);
-    path_to_control_msg.poses.push_back(pose);
-  }
-  path_to_control_pub->publish(path_to_control_msg);
-}
-
 void GlobalPlanner::visualBox(const geometry_msgs::PoseStamped& pose){  
         visualization_msgs::MarkerArray marker_array;
 
@@ -681,23 +680,3 @@ void GlobalPlanner::exit()
     logFile_.close();
 }
 
-// void GlobalPlanner::visGridMap()
-// {
-//   while(ros::ok())
-//   {
-//     gp_mutex_.lock();
-//     if(world_->has_map_)
-//     {
-//       visWorld(world_, &grid_map_vis_pub_);
-//     }
-//     gp_mutex_.unlock();
-//   }
-// }
-
-GlobalPlanner::GlobalPlanner(/* args */)
-{
-}
-
-GlobalPlanner::~GlobalPlanner()
-{
-}

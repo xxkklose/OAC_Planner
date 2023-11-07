@@ -305,7 +305,8 @@ bool World::project2surface(const float &x,const float &y,Vector3d* p_surface)
         grid_map::Position position(x, y);
         *p_surface=Vector3d(x,y,gridMap_.atPosition("elevation", position));
         
-        if(std::isnan((*p_surface)(2))) ifsuccess=false;
+        if(std::isnan((*p_surface)(2))) (*p_surface)(2) = 0.35;
+        // if(std::isnan((*p_surface)(2))) ifsuccess=false;
     }
     return ifsuccess;
 }

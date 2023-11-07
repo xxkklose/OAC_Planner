@@ -3,9 +3,16 @@
 #include "backward.hpp"
 #include "planner_classes.h"
 #include "livox_ros_driver/CustomMsg.h"
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/filters/passthrough.h> // 直通滤波器头文件
+#include <sensor_msgs/PointCloud2.h>
+// #include <vector.h>
 #include <geometry_msgs/PoseArray.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <nav_msgs/Path.h>
 #include <Eigen/Dense>
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
@@ -21,7 +28,14 @@ class LocalPlanner{
                 State(void) : x_(0.0), y_(0.0), z_(0.0), yaw_(0.0), velocity_(0.0), yaw_rate_(0.0){};
                 ~State(){};
 
-                State(const double x, const double y, const double z, const double yaw, const double velocity, const double yaw_rate);
+                State(const double x, const double y, const double z, const double yaw, const double velocity, const double yaw_rate){
+                    x_ = x;
+                    y_ = y;
+                    z_ = z;
+                    yaw_ = yaw;
+                    velocity_ = velocity;
+                    yaw_rate_ = yaw_rate;
+                };
 
                 double x_;
                 double y_;
@@ -31,23 +45,93 @@ class LocalPlanner{
                 double yaw_rate_;
         };
 
+        class Window
+        {
+            public:
+                Window(void) : min_v_(0.0), max_v_(0.0), min_yaw_rate_(0.0), max_yaw_rate_(0.0){};
+                ~Window(){};
+
+                Window(const double min_v, const double max_v, const double min_yaw_rate, const double max_yaw_rate){
+                    min_v_ = min_v;
+                    max_v_ = max_v;
+                    min_yaw_rate_ = min_yaw_rate;
+                    max_yaw_rate_ = max_yaw_rate;
+                };
+
+                double min_v_;
+                double max_v_;
+                double min_yaw_rate_;
+                double max_yaw_rate_;
+        };
+
+        class TrajectoryCost
+        {
+            public:
+                TrajectoryCost(void) : heading_cost_(0.0), clearance_cost_(0.0), dist_cost_(0.0), traj_cost_(0.0), velocity_(0.0), yaw_rate_(0.0){};
+                ~TrajectoryCost(){};
+
+                TrajectoryCost(const double heading_cost, const double clearance_cost, const double dist_cost, const double traj_cost, const double velocity, const double yaw_rate){
+                    heading_cost_ = heading_cost;
+                    clearance_cost_ = clearance_cost;
+                    dist_cost_ = dist_cost;
+                    traj_cost_ = traj_cost;
+                    velocity_ = velocity;
+                    yaw_rate_ = yaw_rate;
+                };
+
+                double heading_cost_;
+                // double velocity_cost_;
+                double clearance_cost_;
+                double dist_cost_;
+                double traj_cost_;
+
+                double velocity_;
+                double yaw_rate_;
+        };
+
         // 局部规划类参数初始化
         void init();
         void process();
         void localMapHandler(const grid_map_msgs::GridMap::ConstPtr& msg);
+        void scanHandler(const sensor_msgs::PointCloud2ConstPtr& msg);
         void livoxScanHandler(const livox_ros_driver::CustomMsg::ConstPtr& msg);
+        void globalPathHandler(const nav_msgs::Path::ConstPtr& msg);
+        void poseHandler(const geometry_msgs::PoseStamped::ConstPtr& msg);
         void goalHandler(const geometry_msgs::PoseStamped::ConstPtr& msg);
+
+        //
+        bool inside_box(const pcl::PointXYZ& pt);
+
+        // 判断当前位置在全局路径中的位置
+        void check_index();
+        double cal_point_angle(const Eigen::Vector3d &s_pt, const Eigen::Vector3d &t_pt);
+        // 判断是否到达目标点
+        bool has_reached();
+        // 到达目标点后重置
+        void reset();
+
+        std::vector<double> DynamicWindowApproach();
+        Window calc_dynamic_window();
+        // 生成轨迹
+        std::vector<State> \
+        generate_trajectory(const double& velocity, const double& yaw_rate);
+        // 计算最短距离
+        double cal_clearance(const std::vector<State>& trajectory);
+        // 计算停止距离
+        double cal_breaking_dist(const double& velocity);
+ 
+
         void can_move();
         bool can_adjust_robot_direction(const Eigen::Vector3d & goal, const Eigen::Quaterniond& goal_quat);
         geometry_msgs::Twist cal_cmd_vel();
 
-        // 根据角速度、目标点、目标点四元数生成轨迹
-        std::vector<State> \
-        generate_trajectory(const double yaw_rate, const Eigen::Vector3d& goal, const Eigen::Quaterniond& goal_quat);
-        // 按照给定速度和角速度运动
+
+       // 按照给定速度和角速度运动
         void motion(State& state, const double velocity, const double yaw_rate);
         // 碰撞检测
         bool check_collision(const std::vector<State>& trajectory);
+
+        void visual();
 
         // 常用方法
         // 计算2维平面方向
@@ -76,6 +160,11 @@ class LocalPlanner{
         double dt_;
         int velocity_samples_; // 线速度采样点数
         int yaw_rate_samples_; // 角速度采样点数
+        State robot_state_; // 机器人状态
+        nav_msgs::Path global_path_; // 全局路径
+        geometry_msgs::PoseStamped curr_pose_; // 当前位置
+        bool get_global_path_ = false; // 是否获取到全局路径
+        Eigen::Vector3d next_target_;
         Eigen::Vector3d goal_; // 目标点
         Eigen::Quaterniond goal_quat_; // 目标点四元数
         geometry_msgs::PoseStamped goal_rel_; // 目标点相对当前位置位姿
@@ -84,6 +173,7 @@ class LocalPlanner{
         double dist_to_goal_th_; // 到达目标点距离阈值
         double angle_to_goal_th_; // 到达目标点角度阈值
         bool has_reached_ = false; // 是否到达目标点
+        bool has_goal_ = false; // 是否有目标点
 
         // 条件标志
         bool use_livox_scan_as_input_; // 使用livox 扫描帧作为输入
@@ -99,9 +189,16 @@ class LocalPlanner{
         ros::NodeHandle nh_;
 
         ros::Subscriber local_map_sub_;
+        ros::Subscriber scan_sub_;
         ros::Subscriber livox_scan_sub_;
+        ros::Subscriber global_path_sub_;
         ros::Subscriber goal_sub_;
         ros::Subscriber pose_sub_;
 
         ros::Publisher traj_pub_;
+        ros::Publisher obs_pub_;
+
+        // 可视化
+        std::vector<std::vector<State>> traj_list_;
+        sensor_msgs::PointCloud2 ob_cloud_;
 };

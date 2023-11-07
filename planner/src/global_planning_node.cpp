@@ -9,7 +9,7 @@ int main(int argc, char** argv)
   gp->init(nh);
 
   // std::thread visualization_thread(&GlobalPlanner::visGridMap, gp); //TODO: visualization thread
-
+  ros::Rate rate(100);
   while (ros::ok())
   {
     auto spinOnce_start_time = std::chrono::steady_clock::now();
@@ -36,6 +36,8 @@ int main(int argc, char** argv)
     }
     if(gp->run_time_log_)
       gp->plotLog();
+    
+    rate.sleep();
   }
 
   // visualization_thread.join();

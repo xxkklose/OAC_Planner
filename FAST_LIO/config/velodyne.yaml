@@ -1,6 +1,7 @@
 common:
     lid_topic:  "/velodyne_points"
-    imu_topic:  "/handsfree/data"
+    imu_topic:  "/imu/data"
+    # imu_topic:  "/wit/imu"
     time_sync_en: false         # ONLY turn on when external time synchronization is really not possible
     time_offset_lidar_to_imu: 0.0 # Time offset between lidar and IMU calibrated by other algorithms, e.g. LI-Init (can be found in README).
                                   # This param will take effect no matter what time_sync_en is. So if the time offset is not known exactly, please set as 0.0
@@ -10,7 +11,7 @@ preprocess:
     scan_line: 32
     scan_rate: 10                # only need to be set for velodyne, unit: Hz,
     timestamp_unit: 2            # the unit of time/t field in the PointCloud2 rostopic: 0-second, 1-milisecond, 2-microsecond, 3-nanosecond.
-    blind: 2
+    blind: 0.2
 
 mapping:
     acc_cov: 0.1
@@ -19,11 +20,18 @@ mapping:
     b_gyr_cov: 0.0001
     fov_degree:    180
     det_range:     100.0
-    extrinsic_est_en:  false      # true: enable the online estimation of IMU-LiDAR extrinsic,
-    extrinsic_T: [ 0, 0, 0.28]
+    extrinsic_est_en:  true      # true: enable the online estimation of IMU-LiDAR extrinsic,
+    extrinsic_T: [ 0, 0, -0.077]
     extrinsic_R: [ 1, 0, 0, 
                    0, 1, 0, 
                    0, 0, 1]
+
+    # extrinsic_T: [-0.08833,-0.075029,-0.993261,
+    #              -0.185543,-0.978468,0.090412,
+    #               -0.978658,0.192279,0.072507]
+    # extrinsic_R: [0.08833,-0.075029,-0.993261,
+    #              -0.185543,-0.978468,0.090412,
+    #               -0.978658,0.192279,0.072507]
 
 publish:
     path_en:  false

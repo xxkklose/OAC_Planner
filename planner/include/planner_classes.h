@@ -240,6 +240,7 @@ inline float calCostBetweenTwoNode(const Node* n1,const Node* n2)
 {
     float dis= EuclideanDistance(n1,n2);
     float cost=dis*(1.5f+0.1f*( 1/(1.0001f-n1->plane_->traversability) +  1/(1.0001f-n2->plane_->traversability) ));
+    // float cost=dis;
     return cost;
 }
 

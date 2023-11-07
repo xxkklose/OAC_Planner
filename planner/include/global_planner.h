@@ -38,7 +38,7 @@ using PointCloud = pcl::PointCloud<PointT>;
 
 class GlobalPlanner  //全局规划类
 {
-        private:
+    private:
         std::ofstream outputFile_;
         std::ofstream keyPointDebug_;
         std::ofstream alignPointDebug_;
@@ -61,6 +61,7 @@ class GlobalPlanner  //全局规划类
         ros::Publisher path_to_control_;
         ros::Publisher cloud_registered_pub_;
         ros::Publisher marker_pub_box_;
+        ros::Publisher sub_map_pub_;
 
         // 运动模式
         enum MotionState
@@ -129,6 +130,7 @@ class GlobalPlanner  //全局规划类
         void rcvWaypointsCallback(const nav_msgs::Path& wp);
         void rcvPointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg);
         void rcvPoseCallback(const geometry_msgs::PoseStamped& pose);
+        void rcvPoseCallback2(const nav_msgs::Path& pose);
         void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* _path_interpolation_pub);
         void findSolution();
         void callPlanner();

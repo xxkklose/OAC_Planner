@@ -1,12 +1,13 @@
 <launch>
-  <!-- <include file="$(find fast_lio)/launch/mapping_mid360.launch"> -->
+  <!-- <include file="$(find scout_gazebo_sim)/launch/scout_smaze_world.launch">
+  </include> -->
+
   <include file="$(find aloam_velodyne)/launch/aloam_velodyne_HDL_32.launch">
-  <!-- <include file="$(find lego_loam)/launch/run.launch"> -->
 	  <arg name="rviz" value="false"/>
   </include>
 
   <node pkg="tf" type="static_transform_publisher" name="world_to_camera_init" args="0 0 0 0 0 0 world camera_init 10" />
-  <!-- <node pkg="tf" type="static_transform_publisher" name="camera_to_link" args="-0.17193 0 -0.13942 0 0 0 /aft_mapped /base_link 10" /> -->
+  <node pkg="tf" type="static_transform_publisher" name="camera_to_link" args="-0.17193 0 -0.13942 0 0 0 aft_mapped base_link 10" />
 
   <node pkg="waypoint_generator" name="waypoint_generator" type="waypoint_generator">
       <remap from="~goal" to="/goal"/>
@@ -15,20 +16,10 @@
 
   <node pkg="planner" type="global_planning_node" name="global_planning_node" output="screen" required = "true">
       <remap from="~waypoints"       to="/waypoint_generator/waypoints"/>
+      <!-- <remap from="~map"             to="/cloud_registered"/>  -->
+
       <rosparam command="load" file="$(find planner)/config/param.yaml"/>
   </node>
-
-  <node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping" output="screen">
-      <rosparam command="load" file="$(find planner)/config/elevation_map.yaml" />
-  </node>
-
-  <!-- <node pkg="grid_map_visualization" type="grid_map_visualization" name="elevation_map_raw_visualization" output="screen">
-    <param name="grid_map_topic" value="/elevation_mapping/elevation_map_raw" />
-    <rosparam command="load" file="$(find planner)/config/elevation_map.yaml" />
-  </node> -->
-
-  <!-- Setup a transform between the world and the robot -->
-  <!-- <node pkg="tf" type="static_transform_publisher" name="robot_base_to_body" args="2.0 6.0 0 0 0.0 0 /base_link /body 100"/> -->
 
   <!-- <node pkg="planner" type="local_obs_node" name="local_obs_node" output="screen" required = "true">
       <remap from="~map"             to="/cloud_registered"/> 
@@ -45,13 +36,10 @@
   <!-- <node pkg="gpr" type="gpr_path" name="gpr_path" output="screen" required="true">
       <param name="file/cfg_path" type="string" value="$(find gpr)/config/hyperparam.txt"/>
   </node> -->
-  <node name="local_planning_node" pkg="planner" type="local_planning_node" >
-      <remap from="~local_map"             to="/elevation_mapping/elevation_map_raw"/>
-      <rosparam command="load" file="$(find planner)/config/local_planner_param.yaml"/>
-  </node>
+    <!-- <node name="local_planner" pkg="local_planner" type="local_planner.py" launch-prefix="gnome-terminal -x">
+  </node> -->
 
-    <!-- <include file="$(find livox_ros_driver)/launch/livox_lidar_msg.launch"/> -->
-  <!-- <include file="$(find livox_ros_driver2)/launch_ROS1/msg_MID360.launch"/> -->
+  <!-- <include file="/home/beihang705/3rdParty/livox_ros_driver2/ws_livox/src/livox_ros_driver2/launch_ROS1/msg_MID360.launch"/> -->
 
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find planner)/config/for_simulation/simulation.rviz" required="true"/>
 </launch>

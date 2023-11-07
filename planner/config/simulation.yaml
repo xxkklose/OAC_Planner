@@ -1,12 +1,12 @@
 ros_topic:
   lidar_topic: "/velodyne_points"
-  imu_topic: "/handsfree/imu"
+  imu_topic: "/imu/data"
   # pose_topic: "/aft_mapped_to_init"
   # pose_topic: /global_planning_node/robot_pose
   pose_topic: /aft_mapped_path # a_loam
   odom_topic: "/handsfree/odom"
   # map_topic: "/cloud_registered" # fast_lio
-  map_topic: "/velodyne_cloud_registered" # a_loam
+  map_topic: "/velodyne_cloud_registered1" # a_loam
   # map_topic: "/full_cloud_projected" 
 
   path_topic: "/path"
@@ -44,12 +44,7 @@ planning:
   max_acc: 0.1
 
   # simulation 0.35 actual 0.45
-  plane_bottom: -0.57 
-  planning_horizon: 20.0
-  planning_time_horizon: 0
-
-  # plane_bottom: -0.48
-  plane_bottom: -0.57
+  plane_bottom: -0.2 
   planning_horizon: 20.0
   planning_time_horizon: 0
 
