@@ -1,0 +1,10 @@
+ros_topic:
+  lidar_topic: /velodyne_points
+  imu_topic: /imu/data
+  # odom_topic: "/handsfree/odom"
+  odom_topic: /aft_mapped_path
+  point_cloud_topic: /velodyne_cloud_registered1 # a_loam
+  
+  map_topic: /mapping_node/map
+  local_map_topic: /mapping_node/local_map
+  global_path_topic: /global_planning_node/global_path

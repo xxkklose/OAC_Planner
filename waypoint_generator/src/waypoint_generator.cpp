@@ -182,12 +182,8 @@ void goal_callback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     } 
     else if (waypoint_type == string("manual-lonely-waypoint")) 
     {
-        cout << "recieve_x:  " << msg->pose.position.x<< endl;
-        cout << "recieve_y:  " << msg->pose.position.y<< endl;
-        cout << "recieve_z:  " << msg->pose.position.z<< endl;
         if (msg->pose.position.z >= 0) 
         {
-            // if height >= 0, it's a valid goal;
             geometry_msgs::PoseStamped pt = *msg;
             waypoints.poses.clear();
             waypoints.poses.push_back(pt);

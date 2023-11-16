@@ -1,0 +1,79 @@
+# ros_topic:
+#   lidar_topic: "/velodyne_points"
+#   imu_topic: "/imu/data"
+#   # pose_topic: "/aft_mapped_to_init"
+#   # pose_topic: /global_planning_node/robot_pose
+#   pose_topic: "/aft_mapped_path" # a_loam
+#   # odom_topic: "/handsfree/odom"
+#   odom_topic: "/aft_mapped_path"
+#   # map_topic: "/cloud_registered" # fast_lio
+#   point_cloud_topic: "/velodyne_cloud_registered1" # a_loam
+#   # map_topic: "/full_cloud_projected" 
+
+#   path_topic: "/path"
+
+map:
+  resolution: 0.08
+  map_x_l: -20.0
+  map_x_u: 20.0
+  map_y_l: -20.0
+  map_y_u: 20.0
+
+  queue_size: 20 
+  queue2_size: 15
+
+planning: 
+  step_size: 1.0 # 步长大小
+  h_surf_car: 0.5
+  goal_biased: 0.15
+  goal_threshold: 0.2
+  sub_goal_threshold: 0.5
+  inherit_threshold: 2
+
+  w_fit_plane: 1.0
+  w_flatness: 1.0
+  w_slope: 0.05
+  w_sparsity: 0.1
+
+  ratio_max: 0.05
+  ratio_min: 0.02
+  conv_thre: 0.1152
+
+  radius_fit_plane: 0.4
+
+  max_vel: 0.05
+  max_acc: 0.1
+
+  # simulation 0.35 actual 0.45
+  plane_bottom: -0.2 
+  planning_horizon: 20.0
+  planning_time_horizon: 0
+
+run_time_log: true
+run_time_print: false
+ 
+# local_planner
+hz: 100.0
+target_velocity: 1.0
+max_velocity_: 2.0
+min_velocity: -1.0
+max_yaw_rate: 5.0
+min_yaw_rate: -5.0
+max_acceleration: 2.0
+max_deceleration: 2.0
+max_d_yaw_rate: 10.0
+angle_resolution: 0.1
+predict_time: 2.0
+dt: 0.1
+velocity_samples: 5
+yaw_rate_samples: 20
+dist_to_goal_th: 1.0 
+angle_to_goal_th: 0.5
+
+h_surf_car: 0.5
+
+use_livox_scan_as_input: false
+use_scan_as_input: false
+use_local_map_as_input: true
+
+
