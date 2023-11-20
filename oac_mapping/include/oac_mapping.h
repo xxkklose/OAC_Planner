@@ -18,6 +18,8 @@
 #include <grid_map_filters/NormalVectorsFilter.hpp>
 #include <filters/filter_chain.h>
 #include <execution>
+#include <chrono>
+#include <thread>
 #include <algorithm>
 
 class Mapping
@@ -35,6 +37,7 @@ public:
     void pointCloudHandler(const sensor_msgs::PointCloud2::ConstPtr& point_cloud_msg);
 
     void updateMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& point_cloud);
+    void initStartRegion();
     bool localMapProcess(const grid_map::Position& local_map_center, const grid_map::Length& local_map_length);
     void visualMap(const grid_map::GridMap& map, const ros::Publisher& map_pub);
 
@@ -50,6 +53,7 @@ private:
 
     std::string odom_sub_topic_;
     std::string point_cloud_sub_topic_;
+    bool has_map_ = false;
 
     pcl::PassThrough<pcl::PointXYZ> pass_;
 

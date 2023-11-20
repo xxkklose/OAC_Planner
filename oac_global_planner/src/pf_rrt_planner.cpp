@@ -741,7 +741,7 @@ Path PFRRTStar::planner(const int &max_iter,const double &max_time)
 
         //Expand from the nearest point to the random point
         Vector2d new_point_2D = steer(rand_point_2D,nearest_point_2D);
-        
+
         //Based on the new 2D point,
         Node* new_node = fitPlane(new_point_2D); 
 

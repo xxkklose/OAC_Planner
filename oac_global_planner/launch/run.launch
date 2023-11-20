@@ -1,46 +1,38 @@
 <launch>
-  <include file="$(find fast_lio)/launch/mapping_mid360.launch">
-	  <!-- <arg name="rviz" value="false"/> -->
+  <node pkg="rs_to_velodyne" type="rs_to_velodyne" name="rs_to_velodyne" args="XYZIRT XYZIRT" output="screen" required="true" />
+
+
+  <include file="$(find aloam_velodyne)/launch/aloam_velodyne_HDL_32.launch">
+	  <arg name="rviz" value="false"/>
   </include>
 
   <node pkg="tf" type="static_transform_publisher" name="world_to_camera_init" args="0 0 0 0 0 0 world camera_init 10" />
-  <node pkg="tf" type="static_transform_publisher" name="camera_to_link" args="-0.17193 0 -0.13942 0 0 0 aft_mapped base_link 10" />
+  <node pkg="tf" type="static_transform_publisher" name="camera_to_link" args="0 0 -0.1398 0 0 0 aft_mapped base_link 10" />
 
   <node pkg="waypoint_generator" name="waypoint_generator" type="waypoint_generator">
       <remap from="~goal" to="/goal"/>
       <param name="waypoint_type" value="manual-lonely-waypoint"/>    
   </node>
 
-  <node pkg="planner" type="global_planning_node" name="global_planning_node" output="screen" required = "true">
-      <remap from="~waypoints"       to="/waypoint_generator/waypoints"/>
-      <!-- <remap from="~map"             to="/fast_lio_sam/mapping/map_global_optimized"/>  -->
-      <!-- <remap from="~map"             to="/Laser_map"/> -->
-      <remap from="~map"             to="/cloud_registered"/> 
-
-      <rosparam command="load" file="$(find planner)/config/for_simulation/param.yaml"/>
+  <node pkg="oac_mapping" type="oac_mapping_node" name="mapping_node" output="screen" required="true">
+      <rosparam command="load" file="$(find oac_global_planner)/config/common.yaml"/>
+      <rosparam command="load" file="$(find oac_mapping)/config/filter_chain.yaml"/>
   </node>
 
-  <!-- <node pkg="planner" type="local_obs_node" name="local_obs_node" output="screen" required = "true">
-      <remap from="~map"             to="/cloud_registered"/> 
+  <node pkg="oac_global_planner" type="oac_global_planner_node" name="global_planning_node" output="screen" required = "true">
+      <remap from="~waypoints"       to="/waypoint_generator/waypoints"/>
+      <rosparam command="load" file="$(find oac_global_planner)/config/common.yaml"/>
+      <rosparam command="load" file="$(find oac_global_planner)/config/param.yaml"/>
+  </node>
 
-      <param name="map/resolution"      value="0.1" />
-      <param name="map/local_x_l"       value="-1.8"/>
-      <param name="map/local_x_u"       value="1.8"/>
-      <param name="map/local_y_l"       value="-1.8"/>
-      <param name="map/local_y_u"       value="1.8"/>
-      <param name="map/local_z_l"       value="-0.5"/>
-      <param name="map/local_z_u"       value="0.4"/>
-  </node>run_time_log: false
+  <node pkg="oac_local_planner" type="oac_local_planner_node" name="local_planning_node" output="screen" required="true">
+      <rosparam command="load" file="$(find oac_global_planner)/config/common.yaml"/>
+      <rosparam command="load" file="$(find oac_global_planner)/config/param.yaml"/>
+  </node>
 
-  <node pkg="gpr" type="gpr_path" name="gpr_path" output="screen" required="true">
+  <!-- <node pkg="gpr" type="gpr_path" name="gpr_path" output="screen" required="true">
       <param name="file/cfg_path" type="string" value="$(find gpr)/config/hyperparam.txt"/>
   </node> -->
-    <!-- <node name="local_planner" pkg="local_planner" type="local_planner.py" launch-prefix="gnome-terminal -x">
-  </node> -->
 
-  <!-- <include file="$(find livox_ros_driver)/launch/livox_lidar_msg.launch"/> -->
-  <include file="$(find livox_ros_driver2)/launch_ROS1/msg_MID360.launch"/>
-
-
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find planner)/config/for_simulation/simulation.rviz" required="true"/>
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find oac_global_planner)/config/for_simulation/real_world.rviz" required="true"/>
 </launch>

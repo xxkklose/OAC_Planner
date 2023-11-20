@@ -91,14 +91,8 @@ class GlobalPlanner  //全局规划类
         double neighbor_radius_;
 
         //动态保存点云地图
-        std::queue<pcl::PointCloud<pcl::PointXYZ>> pointcloud_map_queue_;
-        int queue_size_ = 20;
-        std::queue<std::pair<PointCloud, Vector3d>> pointcloud_vector3d_queue_;
-        int queue2_size_ = 15; //如果卡顿修改他
         Vector3d last_point_ = {0,0,0};
         pcl::PassThrough<pcl::PointXYZ> pass_; //直通滤波过滤器
-        pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor_; //StatisticalOutlierRemoval过滤器
-        pcl::RadiusOutlierRemoval<pcl::PointXYZ> ror_; //半径滤波过滤器
 
         // useful global variables
         Vector3d start_pt_ = {0,0,0};
@@ -106,13 +100,10 @@ class GlobalPlanner  //全局规划类
         Vector3d target_pt_;
         geometry_msgs::PoseStamped start_pose_ = geometry_msgs::PoseStamped();
         World* world_ = NULL;
-        Minimum_jerk mj_ = Minimum_jerk();
         PFRRTStar* pf_rrt_star_ = NULL;
         Path compare_path_ = Path();
         Path solution_ = Path();
         int solution_not_change_count_ = 0;
-        double max_vel_;
-        double max_acc_;
 
         // indicate whether the robot has a moving goal
         // 根据该标志设置是否由目标点
@@ -127,14 +118,11 @@ class GlobalPlanner  //全局规划类
         ~GlobalPlanner();
 
         void init(ros::NodeHandle& nh);
-        void pointCallback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg);
+        void process();
         void mapCallback(const grid_map_msgs::GridMap& map_msg);
         void localMapCallback(const grid_map_msgs::GridMap& map_msg);
-        void multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg);
         void rcvWaypointsCallback(const nav_msgs::Path& wp);
-        void rcvPointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &surfmap_msg);
-        void rcvPoseCallback(const geometry_msgs::PoseStamped& pose);
-        void rcvPoseCallback2(const nav_msgs::Path& pose);
+        void rcvPoseCallback(const nav_msgs::Path& pose);
         void removeGlobalPathPoints(Path& solution);
         bool needChangeGlobalPath(const Path &solution);
         bool checkSolutionCollision();
@@ -144,15 +132,14 @@ class GlobalPlanner  //全局规划类
         void pubPathToControl(ros::Publisher* path_to_control_pub);
         void motionModeDetect();
         void returnModeCallback(const std_msgs::String& msg);
-        void alignModeCallback(const std_msgs::String& msg);
         void visualBox(const geometry_msgs::PoseStamped& pose);
         void plotLog();
         void exit();
 
-        // log struct
         bool run_time_log_ = false;
         bool run_time_print_ = false;
 
+        // log struct
         struct logPlot
         {
             // 主要模块耗时

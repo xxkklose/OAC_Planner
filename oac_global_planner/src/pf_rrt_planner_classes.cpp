@@ -199,7 +199,9 @@ void World::initGridMap(grid_map::GridMap& gridMap)
 
     idx_count_ = ((upperbound_-lowerbound_)/resolution_).cast<int>() + Eigen::Vector3i::Ones();
     
-    has_map_=true;
+    if(subMap_.exists("elevation_inpainted")){
+        has_map_=true;
+    }else has_map_=false;
 }
 
 void World::initGridMap(const pcl::PointCloud<pcl::PointXYZ> &cloud)
@@ -361,7 +363,7 @@ bool World::project2GridMapSurf(const float &x,const float &y,Eigen::Vector3d* p
         *p_surface=Vector3d(gridCenter(0), gridCenter(1), subMap_.atPosition("elevation_inpainted", gridCenter));
         
         if(std::isnan((*p_surface)(2))) ifsuccess=false;
-    } 
+    }else return false;
 
     return ifsuccess;
 }

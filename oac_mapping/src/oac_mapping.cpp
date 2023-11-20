@@ -46,16 +46,32 @@ void Mapping::init()
 
 void Mapping::process()
 {
-    ros::Rate rate(500);
+    // std::chrono::milliseconds interval(100);
+    // std::thread map_timer([&]() {
+    //     while(ros::ok()){
+    //         // std::this_thread::sleep_for(interval);
+
+    //         if(has_map_){
+    //             visualMap(map_, map_pub_);
+    //             visualMap(local_map_, local_map_pub_);
+    //         }
+    //     }
+    // });   
+
+    ros::Rate rate(1000);
     while(ros::ok())
     {
         ros::spinOnce();
+        visualMap(map_, map_pub_);
+        visualMap(local_map_, local_map_pub_);
         rate.sleep();
     }
     if(!ros::ok())
     {
         exit();
     }
+
+    // map_timer.join();
 }
 
 void Mapping::exit()
@@ -70,7 +86,7 @@ void Mapping::odomHandler(const nav_msgs::Path::ConstPtr& odom_msg)
                  odom_msg->poses.back().pose.position.z;
 
     grid_map::Position local_map_center(curr_pos_(0), curr_pos_(1));
-    grid_map::Length local_map_length(20, 20);
+    grid_map::Length local_map_length(10, 10);
 
     bool get_local_map = localMapProcess(local_map_center, local_map_length);
     
@@ -116,39 +132,32 @@ void Mapping::pointCloudHandler(const sensor_msgs::PointCloud2::ConstPtr& point_
 
     updateMap(cloud);
 
-    visualMap(map_, map_pub_);
-    visualMap(local_map_, local_map_pub_);
-
-    // auto end_time1 = std::chrono::steady_clock::now();
-
-    // auto end_time2 = std::chrono::steady_clock::now();
-
-    // auto time1 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time1 - start_time);
-    // auto time2 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time2 - end_time1);
-    // if(run_time_print_) ROS_WARN("time1: %f s, time2: %f s", time1.count(), time2.count());
-
-    // log_data_.map_construction_time = time1.count();
-
-    // visWorld(world_, &octo_map_vis_pub_, &grid_map_vis_pub_);
-    // auto end_time3 = std::chrono::steady_clock::now();
-    // auto time_consume = std::chrono::duration_cast<std::chrono::duration<double>>(end_time3 - end_time2);
-    // auto total_time = std::chrono::duration_cast<std::chrono::duration<double>>(end_time3 - start_time);
-    // if(run_time_print_) ROS_WARN("vis_time: %f", time_consume);
-    // if(run_time_print_) ROS_WARN("multi_callback time: %f", total_time.count());
-    // log_data_.vis_time = time_consume.count();
-    // log_data_.multi_callback_time = total_time.count();
+    initStartRegion();
 }
 
 void Mapping::updateMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& point_cloud)
 {
     std::for_each(std::execution::par, point_cloud->begin(), point_cloud->end(), [&](const auto& pt) {  
         Vector3d obstacle(pt.x, pt.y, pt.z);  
-        if(!(abs(pt.x - curr_pos_.x()) < 2.0 && abs(pt.y - curr_pos_.y()) < 2.0 && abs(pt.z - curr_pos_.z()) < 0.4))
+        if(!(abs(pt.x - curr_pos_.x()) < 0.4 && abs(pt.y - curr_pos_.y()) < 0.4 && abs(pt.z - curr_pos_.z()) < 0.6))
         {
             grid_map::Position position(obstacle(0), obstacle(1));
             map_.atPosition("elevation", position) = obstacle(2);
         }
     });  
+    has_map_ = true;
+}
+
+void Mapping::initStartRegion()
+{
+    for(int i=-5; i<=5; i++)
+    {
+        for(int j=-5; j<=5; j++)
+        {
+            grid_map::Position pos(i*0.1,j*0.1);
+            map_.atPosition("elevation", pos) = -0.37;
+        }
+    }
 }
 
 void Mapping::visualMap(const grid_map::GridMap& map, const ros::Publisher& map_pub)

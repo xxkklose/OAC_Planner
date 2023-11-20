@@ -28,24 +28,24 @@ grid_map_filters:
       output_layer: elevation_inpainted
       radius: 0.05
 
-  # Reduce noise with a radial blurring filter.
-  - name: mean_in_radius
-    type: gridMapFilters/MeanInRadiusFilter
+  # # Reduce noise with a radial blurring filter.
+  # - name: mean_in_radius
+  #   type: gridMapFilters/MeanInRadiusFilter
+  #   params:
+  #     input_layer: elevation_inpainted
+  #     output_layer: elevation_smooth
+  #     radius: 0.06
+
+  # Boxblur as an alternative to the inpaint and radial blurring filter above.
+  - name: boxblur
+    type: gridMapFilters/SlidingWindowMathExpressionFilter
     params:
       input_layer: elevation_inpainted
       output_layer: elevation_smooth
-      radius: 0.06
-
-  # # Boxblur as an alternative to the inpaint and radial blurring filter above.
-  # # - name: boxblur
-  # #   type: gridMapFilters/SlidingWindowMathExpressionFilter
-  # #   params:
-  # #     input_layer: elevation
-  # #     output_layer: elevation_smooth
-  # #     expression: meanOfFinites(elevation)
-  # #     compute_empty_cells: true
-  # #     edge_handling: crop # options: inside, crop, empty, mean
-  # #     window_size: 5 # optional
+      expression: meanOfFinites(elevation_inpainted)
+      compute_empty_cells: true
+      edge_handling: mean # options: inside, crop, empty, mean
+      window_size: 1 # optional
 
   # Compute surface normals.
   - name: surface_normals
@@ -53,7 +53,7 @@ grid_map_filters:
     params:
       input_layer: elevation_inpainted
       output_layers_prefix: normal_vectors_
-      radius: 0.05
+      radius: 0.1
       normal_vector_positive_axis: z
 
   # Add a color layer for visualization based on the surface normal.

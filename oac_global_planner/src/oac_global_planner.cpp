@@ -25,8 +25,7 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
     wp_sub_                 = nh.subscribe
         ("waypoints", 1, &GlobalPlanner::rcvWaypointsCallback, this);
     pose_sub_               = nh.subscribe
-        // (pose_sub_topic_, 1, &GlobalPlanner::rcvPoseCallback, this);
-        (pose_sub_topic_, 1, &GlobalPlanner::rcvPoseCallback2, this);
+        (pose_sub_topic_, 1, &GlobalPlanner::rcvPoseCallback, this);
     returnMode_sub_         = nh.subscribe
         ("/return_mode", 100, &GlobalPlanner::returnModeCallback, this);
 
@@ -58,13 +57,7 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
     nh.param("planning/conv_thre", fit_plane_arg_.conv_thre_, 0.1152);
     nh.param("planning/radius_fit_plane", radius_fit_plane_, 1.0); // 拟合平面半径
     nh.param("planning/max_initial_time", max_initial_time_, 1000.0); // 最大初始化时间
-    
 
-    nh.param("planning/max_vel", max_vel_, 0.3);
-    nh.param("planning/max_acc", max_acc_, 0.1);
-
-    nh.param("map/queue_size", queue_size_, 20);
-    nh.param("map/queue2_size", queue2_size_, 15);
     nh.param("planning/plane_bottom", plane_bottom_, -0.45);
     nh.param("planning/planning_horizon", planning_horizon_, 5.0);
     nh.param("planning/planning_time_horizon", planning_time_horizon_, 0.5);
@@ -88,7 +81,7 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
     nh.param("run_time_print", run_time_print_, false);
 
     // 获取当前节点的包路径
-    std::string package_path = ros::package::getPath("planner");
+    std::string package_path = ros::package::getPath("oac_global_planner");
 
     outputFile_.open(package_path + "/log/waypoint_log.txt", std::ios::out | std::ios::trunc);
     keyPointDebug_.open(package_path + "/log/keypoint_log.txt", std::ios::out | std::ios::trunc);
@@ -121,6 +114,45 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
     keyPoints_.reset(new PointCloud);
 
 }
+
+
+void GlobalPlanner::process()
+{
+  // std::thread visualization_thread(&GlobalPlanner::visGridMap, gp);
+  ros::Rate rate(100);
+  while (ros::ok())
+  {
+    auto spinOnce_start_time = std::chrono::steady_clock::now();
+    ros::spinOnce();
+    auto spinOnce_end_time = std::chrono::steady_clock::now();
+
+    auto motionModeDetect_start_time = std::chrono::steady_clock::now();
+    motionModeDetect();
+    auto motionModeDetect_end_time = std::chrono::steady_clock::now();
+
+    auto callPlanner_start_time = std::chrono::steady_clock::now();
+    callPlanner();
+    auto callPlanner_end_time = std::chrono::steady_clock::now();
+
+    auto total_time = std::chrono::duration_cast<std::chrono::duration<double>>(callPlanner_end_time - spinOnce_start_time);
+    if(total_time.count() > 1e-3 && run_time_print_)
+    {
+      ROS_WARN("main loop time: %f", total_time.count());
+      ROS_WARN("spinOnce time: %f", std::chrono::duration_cast<std::chrono::duration<double>>(spinOnce_end_time - spinOnce_start_time).count());
+      ROS_WARN("motionModeDetect time: %f", std::chrono::duration_cast<std::chrono::duration<double>>(motionModeDetect_end_time - motionModeDetect_start_time).count());
+      ROS_WARN("callPlanner time: %f", std::chrono::duration_cast<std::chrono::duration<double>>(callPlanner_end_time - callPlanner_start_time).count());
+      log_data_.main_loop_time = total_time.count();
+      log_data_.updated = true;
+    }
+    if(run_time_log_)
+      plotLog();
+    
+    rate.sleep();
+  }
+  if(!ros::ok())
+    exit();
+}
+
 
 void GlobalPlanner::mapCallback(const grid_map_msgs::GridMap& map_msg)
 {
@@ -159,58 +191,7 @@ void GlobalPlanner::rcvWaypointsCallback(const nav_msgs::Path& wp)
   log_data_.rcv_waypoints_callback_time = time_consume.count();
 }
 
-void GlobalPlanner::multi_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_registered_msg) {
-  auto end_time1 = std::chrono::steady_clock::now();
-
-  // auto end_time2 = std::chrono::steady_clock::now();
-
-  // auto time1 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time1 - start_time);
-  // auto time2 = std::chrono::duration_cast<std::chrono::duration<double>>(end_time2 - end_time1);
-  // if(run_time_print_) ROS_WARN("time1: %f s, time2: %f s", time1.count(), time2.count());
-
-  // log_data_.map_construction_time = time1.count();
-
-  // auto end_time3 = std::chrono::steady_clock::now();
-  // auto time_consume = std::chrono::duration_cast<std::chrono::duration<double>>(end_time3 - end_time2);
-  // auto total_time = std::chrono::duration_cast<std::chrono::duration<double>>(end_time3 - start_time);
-  // if(run_time_print_) ROS_WARN("vis_time: %f", time_consume);
-  // if(run_time_print_) ROS_WARN("multi_callback time: %f", total_time.count());
-  // log_data_.vis_time = time_consume.count();
-  // log_data_.multi_callback_time = total_time.count();
-}
-
-void GlobalPlanner::rcvPoseCallback(const geometry_msgs::PoseStamped& pose)
-{
-  auto t1 = std::chrono::steady_clock::now();
-  gp_mutex_.lock();
-  start_pt_ << pose.pose.position.x, pose.pose.position.y, pose.pose.position.z;
-  start_pose_ = pose;
-
-  if(motionState_ == SearchMode)
-  {
-    if(start_pt_.norm() == 0 || (lastKeyPoint_ - start_pt_).norm() > 1.0)
-    {
-      keyPointDebug_ << "处于搜索模式，插入关键节点： " << "\n";
-      keyPointDebug_ << "三维坐标为： x: " << start_pt_.x() << "  y: " << start_pt_.y() << "  z: " << start_pt_.z() << "\n";
-      PointT point(start_pt_.x(), start_pt_.y(), start_pt_.z());
-      keyPoints_->points.push_back(point);
-      lastKeyPoint_ = start_pt_;
-    }
-  }
-  gp_mutex_.unlock();
-
-  geometry_msgs::PoseStamped pose_to_control;
-  pose_to_control.header.frame_id = "camera_init";
-  pose_to_control.header.stamp = ros::Time::now();
-  pose_to_control.pose = pose.pose;
-  visualBox(pose_to_control);
-  auto t2 = std::chrono::steady_clock::now();
-  auto time_consume = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-  log_data_.rcv_pose_callback_time = time_consume.count();
-
-}
-
-void GlobalPlanner::rcvPoseCallback2(const nav_msgs::Path& pose)
+void GlobalPlanner::rcvPoseCallback(const nav_msgs::Path& pose)
 {
   auto t1 = std::chrono::steady_clock::now();
   gp_mutex_.lock();
@@ -240,11 +221,6 @@ void GlobalPlanner::returnModeCallback(const std_msgs::String& msg)
 {
   if(msg.data == "true") motionState_ = ReturnMode;
   else if(msg.data == "false") motionState_ = SearchMode;
-}
-
-void GlobalPlanner::alignModeCallback(const std_msgs::String& msg)
-{
-
 }
 
 /**
@@ -499,6 +475,7 @@ void GlobalPlanner::callPlanner()
       int max_iter = 550;
       double max_time = 100.0;
       pf_rrt_star_->planner(max_iter, max_time);
+
       // ROS_INFO("Current size of tree: %d", (int)(pf_rrt_star_->tree().size()));
     }
     else if(pf_rrt_star_->state() != WithoutGoal)
