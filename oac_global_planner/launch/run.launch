@@ -19,6 +19,11 @@
       <rosparam command="load" file="$(find oac_mapping)/config/filter_chain.yaml"/>
   </node>
 
+  <node pkg="grid_map_visualization" type="grid_map_visualization" name="grid_map_visualization" output="screen">
+    <rosparam command="load" file="$(find oac_global_planner)/config/visual.yaml" />
+  </node>
+
+
   <node pkg="oac_global_planner" type="oac_global_planner_node" name="global_planning_node" output="screen" required = "true">
       <remap from="~waypoints"       to="/waypoint_generator/waypoints"/>
       <rosparam command="load" file="$(find oac_global_planner)/config/common.yaml"/>
