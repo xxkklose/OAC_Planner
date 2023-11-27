@@ -13,7 +13,9 @@ find_package(catkin REQUIRED COMPONENTS
   rviz_visual_tools
   std_msgs
   tf
+  tf_conversions
   grid_map_ros
+  grid_map_cv
 )
 
 find_package(PCL REQUIRED)
@@ -36,4 +38,5 @@ target_link_libraries(${PROJECT_NAME}_node
     ${catkin_LIBRARIES}
     ${PCL_LIBRARIES} 
     TBB::tbb
+    -lgmp
 )
