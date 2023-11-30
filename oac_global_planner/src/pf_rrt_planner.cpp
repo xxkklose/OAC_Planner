@@ -102,12 +102,14 @@ void PFRRTStar::initWithGoal(const Vector3d &start_pos,const Vector3d &end_pos)
         node_origin_=node_origin;  
         tree_.push_back(node_origin_);
     }
+    ROS_WARN("tree size: %d", tree_.size());
 
     if(planning_state_==Roll && last_end_pos_2D!=end_pos_2D_) sub_goal_threshold_=1.0f;
 
     vector<Node*> origin_and_goal{node_origin_};
     if(planning_state_==Global) origin_and_goal.push_back(node_target_);
     visOriginAndGoal(origin_and_goal,goal_vis_pub_);
+    initWithGoaled =true;
 }
 
 void PFRRTStar::initWithoutGoal(const Vector3d &start_pos)
@@ -744,6 +746,7 @@ Path PFRRTStar::planner(const int &max_iter,const double &max_time)
 
         //Based on the new 2D point,
         Node* new_node = fitPlane(new_point_2D); 
+        ROS_WARN("before tree siez: %d", tree_.size());
 
         if( new_node!=NULL//1.Fail to fit the plane,it will return a null pointer
             &&world_->isInsideBorder(new_node->position_)//2.The position is out of the range of the grid map.
@@ -768,17 +771,23 @@ Path PFRRTStar::planner(const int &max_iter,const double &max_time)
 
             //Add the new node to the tree
             tree_.push_back(new_node);
+            ROS_WARN("after Add");
+
 
             //Rewire the tree to optimize it
             reWire(new_node,neighbor_record); // 加入node_new之后更新树中邻居节点集合中每个节点的cost
+            ROS_WARN("after reWire");
+
 
             //Check if the new node is close enough to the goal
             closeCheck(new_node);
+            ROS_WARN("after closeCheck");
+
 
             if(planning_state_==Global) generatePath();
         }
         else  
-            delete new_node;
+            delete new_node;        
     }
 
     if(planning_state_==Roll) generatePath();

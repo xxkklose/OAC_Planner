@@ -1,10 +1,11 @@
 <launch>
   <node pkg="rs_to_velodyne" type="rs_to_velodyne" name="rs_to_velodyne" args="XYZIRT XYZIRT" output="screen" required="true" />
 
-
   <include file="$(find aloam_velodyne)/launch/aloam_velodyne_HDL_32.launch">
 	  <arg name="rviz" value="false"/>
   </include>
+
+  <include file="$(find rslidar_sdk)/launch/start.launch" />
 
   <node pkg="tf" type="static_transform_publisher" name="world_to_camera_init" args="0 0 0 0 0 0 world camera_init 10" />
   <node pkg="tf" type="static_transform_publisher" name="camera_to_link" args="0 0 -0.1398 0 0 0 aft_mapped base_link 10" />
@@ -40,4 +41,5 @@
   </node> -->
 
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find oac_global_planner)/config/for_simulation/real_world.rviz" required="true"/>
+
 </launch>

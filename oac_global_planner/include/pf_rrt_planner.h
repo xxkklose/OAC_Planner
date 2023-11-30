@@ -23,6 +23,8 @@ public:
     ros::Publisher* tree_tra_pub_=NULL;
 
     std::ofstream tree_in_Debug_;
+    bool initWithGoaled = false;
+
 
     PFRRTStar();
     PFRRTStar(const double &height,World* world);//Input the height of the robot center,and the array of grid map.
@@ -124,7 +126,7 @@ protected:
     double radius_fit_plane_=1.0;
 
     //radius used in function FindNeighbors
-    float neighbor_radius_=1.0f;
+    float neighbor_radius_=1.5f;
 
     PlanningState planning_state_ = WithoutGoal;
 

@@ -895,7 +895,8 @@ void process()
 			q.setY(q_w_curr.y());
 			q.setZ(q_w_curr.z());
 			transform.setRotation(q);
-			br.sendTransform(tf::StampedTransform(transform, odomAftMapped.header.stamp, "camera_init", "aft_mapped"));
+			br.sendTransform(tf::StampedTransform(transform, ros::Time().now(), "camera_init", "aft_mapped"));
+			// br.sendTransform(tf::StampedTransform(transform, odomAftMapped.header.stamp, "camera_init", "aft_mapped"));
 
 			frameCount++;
 		}

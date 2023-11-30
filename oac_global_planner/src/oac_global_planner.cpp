@@ -119,7 +119,7 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
 void GlobalPlanner::process()
 {
   // std::thread visualization_thread(&GlobalPlanner::visGridMap, gp);
-  ros::Rate rate(100);
+  ros::Rate rate(10);
   while (ros::ok())
   {
     auto spinOnce_start_time = std::chrono::steady_clock::now();
@@ -180,6 +180,7 @@ void GlobalPlanner::rcvWaypointsCallback(const nav_msgs::Path& wp)
     target_pt_ = Vector3d(wp.poses[0].pose.position.x, wp.poses[0].pose.position.y, wp.poses[0].pose.position.z);
     ROS_INFO("Receive the planning target");
     has_goal_ = true;
+    pf_rrt_star_->initWithGoaled = false;
     // 设置出发点
     planning_start_pt_ = start_pt_;
     compare_path_.nodes_.clear();
@@ -325,7 +326,7 @@ bool GlobalPlanner::needChangeGlobalPath(const Path &solution)
       return true;
     }
     else solution_not_change_count_++;
-    if(solution_not_change_count_ > 5)
+    if(solution_not_change_count_ > 20)
     {
       solution_.updatePath(compare_path_);
       solution_not_change_count_ = 0;
@@ -358,7 +359,8 @@ void GlobalPlanner::findSolution()
   // ROS_INFO("Start calling PF-RRT*");
   Path solution = Path();
 
-  pf_rrt_star_->initWithGoal(planning_start_pt_, target_pt_);
+  if(!pf_rrt_star_->initWithGoaled)
+    pf_rrt_star_->initWithGoal(planning_start_pt_, target_pt_);
 
   // Case1: The PF-RRT* can't work at when the origin can't be project to surface
   if (pf_rrt_star_->state() == Invalid)

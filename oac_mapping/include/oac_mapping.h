@@ -44,12 +44,6 @@ public:
 
     void updateMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& point_cloud);
     void initStartRegion();
-    void updateTF();
-    void pointCloudTransform();
-    void lidar2gridmap(Eigen::MatrixXf& lidar_data_matrix);
-    Eigen::MatrixXf map_interpolation(const Eigen::MatrixXf &map_data);
-    Eigen::MatrixXf map_inflate(const Eigen::MatrixXf &map_data);
-    void map_inflate_block(Eigen::MatrixXf &dst, const Eigen::MatrixXf &src, int startRow, int startCol, int radius);
     bool localMapProcess(const grid_map::Position& local_map_center, const grid_map::Length& local_map_length);
     void visualMap(const grid_map::GridMap& map, const ros::Publisher& map_pub, const std::string& frame_id);
 
@@ -78,16 +72,9 @@ private:
     grid_map::GridMap local_map_;
     filters::FilterChain<grid_map::GridMap> filter_chain_{"grid_map::GridMap"};
 
-    tf::TransformListener tf_listener_;
-    tf::StampedTransform lidar_world_transform_;
-    tf::StampedTransform base_world_transform_;
-    pcl::PointCloud<pcl::PointXYZ> lidar_cloud_;
-    pcl::PointCloud<pcl::PointXYZ> lidar_cloud_filter_;
-    pcl::PointCloud<pcl::PointXYZ> lidar_cloud_global_;
+    bool first_init_ = false;
 
-    int map_index_len;
 
-    grid_map::GridMap sub_map_;
 };
 
 
