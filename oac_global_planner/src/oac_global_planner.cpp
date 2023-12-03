@@ -1,4 +1,5 @@
 #include "oac_global_planner.h"
+#include "Hybrid_A_Star/a_star.hpp"
 
 using namespace OAC::visualization;
 using namespace OAC::planner;
@@ -45,6 +46,8 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
         ("tree_tra", 40);
     marker_pub_box_         = nh.advertise<visualization_msgs::MarkerArray>
         ("visualization_marker_box", 10);
+    a_star_path_pub_        = nh.advertise<nav_msgs::Path>
+        ("a_star_path", 1);
 
 
     // 平面拟合参数
@@ -131,8 +134,10 @@ void GlobalPlanner::process()
     auto motionModeDetect_end_time = std::chrono::steady_clock::now();
 
     auto callPlanner_start_time = std::chrono::steady_clock::now();
-    callPlanner();
+    // callPlanner();
     auto callPlanner_end_time = std::chrono::steady_clock::now();
+
+    callAStar();
 
     auto total_time = std::chrono::duration_cast<std::chrono::duration<double>>(callPlanner_end_time - spinOnce_start_time);
     if(total_time.count() > 1e-3 && run_time_print_)
@@ -326,7 +331,7 @@ bool GlobalPlanner::needChangeGlobalPath(const Path &solution)
       return true;
     }
     else solution_not_change_count_++;
-    if(solution_not_change_count_ > 20)
+    if(solution_not_change_count_ > 10)
     {
       solution_.updatePath(compare_path_);
       solution_not_change_count_ = 0;
@@ -359,8 +364,8 @@ void GlobalPlanner::findSolution()
   // ROS_INFO("Start calling PF-RRT*");
   Path solution = Path();
 
-  if(!pf_rrt_star_->initWithGoaled)
-    pf_rrt_star_->initWithGoal(planning_start_pt_, target_pt_);
+  // if(!pf_rrt_star_->initWithGoaled)
+  pf_rrt_star_->initWithGoal(planning_start_pt_, target_pt_);
 
   // Case1: The PF-RRT* can't work at when the origin can't be project to surface
   if (pf_rrt_star_->state() == Invalid)
@@ -585,3 +590,41 @@ void GlobalPlanner::exit()
     logFile_.close();
 }
 
+
+void GlobalPlanner::callAStar()
+{
+  AStar* a_star = new AStar();
+  if(!world_->has_map_ || !has_goal_)
+    return;
+  bool init_flag = a_star->initParam(world_->subMap_, 0.08, start_pt_, target_pt_);
+  if(!init_flag)
+  {
+    delete a_star;
+    return;
+  }
+  a_star->process();
+  ROS_WARN("A* process finished");
+  vector<Vector3f> path = a_star->returnPath();
+  ROS_WARN("A* path size: %d", path.size());
+  if(path.size() == 0)
+  {
+    delete a_star;
+    return; 
+  }
+  // 可视化路径
+  nav_msgs::Path path_to_control_msg;
+  path_to_control_msg.header.frame_id = "camera_init";
+  path_to_control_msg.header.stamp = ros::Time::now();
+  for (size_t i = 0; i < path.size(); i++)
+  {
+    geometry_msgs::PoseStamped pose; 
+    pose.header.frame_id = "camera_init";
+    pose.header.stamp = ros::Time::now();
+    pose.pose.position.x = path[i](0);
+    pose.pose.position.y = path[i](1);
+    pose.pose.position.z = path[i](2);
+    path_to_control_msg.poses.push_back(pose);
+  }
+  a_star_path_pub_.publish(path_to_control_msg);
+  delete a_star;
+}

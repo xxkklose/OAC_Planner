@@ -1,11 +1,14 @@
+// 包含高斯过程回归和ROS相关的头文件
 #include "gaussian_process_regression/gaussian_process_regression.h"
 #include <ros/ros.h>
 #include <fstream>
 #include <std_msgs/Float32MultiArray.h>
 
+// 使用标准库和Eigen库的命名空间
 using namespace std;
 using namespace Eigen;
 
+// 定义全局变量
 double length_scale ;
 double sigma_f ;
 double sigma_n ;
@@ -18,6 +21,7 @@ ros::Publisher _surf_predict_pub;
 
 string filepath;
     
+// 加载数据的函数模板
 template<typename input_type, typename output_type>
 void load_data(const char *fname, std::vector<input_type> &inputs, std::vector<output_type> &outputs, int input_dim, int output_dim) {
   std::cout<<"entry this branch........"<<std::endl;
@@ -42,6 +46,7 @@ void load_data(const char *fname, std::vector<input_type> &inputs, std::vector<o
   }
   std::cout<<"finish loading..."<<std::endl;
 }
+// 从文件中设置高斯过程回归的超参数
 template<typename R>
 void set_hyperparameters_from_file(const char *fname, GaussianProcessRegression<R> & gpr) {
   std::ifstream myfile;
@@ -57,17 +62,20 @@ void set_hyperparameters_from_file(const char *fname, GaussianProcessRegression<
   gpr.SetHyperParams(l,f,n);
 }
 
+// 清空输入向量的函数
 void ClearVectorIn( vector< input_type >& vt ) 
 {
   vector< input_type >  veTemp; 
   veTemp.swap( vt );
 }
+// 清空输出向量的函数
 void ClearVectorOut( vector< output_type >& vt ) 
 {
   vector< output_type > veTemp; 
   veTemp.swap( vt );
 }
 
+// 处理树的回调函数
 void treecb(const std_msgs::Float32MultiArray::ConstPtr& msg)
 {
   double dur;
@@ -135,6 +143,7 @@ void treecb(const std_msgs::Float32MultiArray::ConstPtr& msg)
   cout<<"Time consume ："<<dur/1000<<" ms"<<endl;
 }
 
+// 处理路径的回调函数
 void pathcb(const std_msgs::Float32MultiArray::ConstPtr& msg)
 {
   ROS_INFO("[node] receive the path");
@@ -150,6 +159,7 @@ void pathcb(const std_msgs::Float32MultiArray::ConstPtr& msg)
 }
 
 
+// 主函数
 int main(int argc, char **argv)
 {
     ros::init (argc, argv, "GPR");

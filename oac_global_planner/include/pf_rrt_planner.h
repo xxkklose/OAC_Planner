@@ -141,6 +141,7 @@ protected:
 
     //record 2D information of target,when the target can't be projected to surface,it will be used in rolling-planning
     Eigen::Vector2d end_pos_2D_;
+    Eigen::Vector2d start_pos_2D_;
 
 //Function Members
 

@@ -6,8 +6,8 @@
 	  <arg name="rviz" value="false"/>
   </include>
 
-  <!-- <node pkg="tf" type="static_transform_publisher" name="world_to_camera_init" args="0 0 0 0 0 0 world camera_init 10" />
-  <node pkg="tf" type="static_transform_publisher" name="camera_to_link" args="0 0 -0.1398 0 0 0 aft_mapped base_link 10" /> -->
+  <node pkg="tf" type="static_transform_publisher" name="world_to_camera_init" args="0 0 0 0 0 0 world camera_init 10" />
+  <node pkg="tf" type="static_transform_publisher" name="camera_to_link" args="0 0 -0.1398 0 0 0 world base_link 10" />
 
   <node pkg="waypoint_generator" name="waypoint_generator" type="waypoint_generator">
       <remap from="~goal" to="/goal"/>
@@ -23,11 +23,11 @@
     <rosparam command="load" file="$(find oac_global_planner)/config/visual.yaml" />
   </node>
 
-  <!-- <node pkg="oac_global_planner" type="oac_global_planner_node" name="global_planning_node" output="screen" required = "true">
+  <node pkg="oac_global_planner" type="oac_global_planner_node" name="global_planning_node" output="screen" required = "true">
       <remap from="~waypoints"       to="/waypoint_generator/waypoints"/>
       <rosparam command="load" file="$(find oac_global_planner)/config/common.yaml"/>
       <rosparam command="load" file="$(find oac_global_planner)/config/simulation.yaml"/>
-  </node> -->
+  </node>
 
   <node pkg="oac_local_planner" type="oac_local_planner_node" name="local_planning_node" output="screen" required="true">
       <rosparam command="load" file="$(find oac_global_planner)/config/common.yaml"/>

@@ -26,6 +26,7 @@
 #include <chrono>
 #include <thread>
 #include <algorithm>
+#include <mutex>
 
 class Mapping
 {
@@ -43,7 +44,7 @@ public:
     void lidarHandler(const sensor_msgs::PointCloud2::ConstPtr& lidar_msg);
 
     void updateMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& point_cloud);
-    void initStartRegion();
+    void updateLidarMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& point_cloud);
     bool localMapProcess(const grid_map::Position& local_map_center, const grid_map::Length& local_map_length);
     void visualMap(const grid_map::GridMap& map, const ros::Publisher& map_pub, const std::string& frame_id);
 
@@ -54,6 +55,8 @@ private:
     ros::Subscriber odom_sub_;
     ros::Subscriber point_cloud_sub_;
     ros::Subscriber lidar_sub_;
+
+    tf::TransformListener tf_listener_;
 
     ros::Publisher map_pub_;
     ros::Publisher local_map_pub_;
@@ -67,14 +70,14 @@ private:
     pcl::PassThrough<pcl::PointXYZ> pass_;
 
     Eigen::Vector3d curr_pos_ = {0, 0, 0};
+    double default_height_ = 0.0;
 
     grid_map::GridMap map_;
     grid_map::GridMap local_map_;
+    grid_map::GridMap lidar_map_;
     filters::FilterChain<grid_map::GridMap> filter_chain_{"grid_map::GridMap"};
 
-    bool first_init_ = false;
-
-
+    bool has_lidar_map_ = false;
 };
 
 

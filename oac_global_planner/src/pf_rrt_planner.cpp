@@ -28,10 +28,12 @@ PFRRTStar::~PFRRTStar()
 void PFRRTStar::initWithGoal(const Vector3d &start_pos,const Vector3d &end_pos)
 {
     Vector2d last_end_pos_2D=end_pos_2D_; 
+    Vector2d last_start_pos_2D=start_pos_2D_;
     PlanningState last_planning_state=planning_state_;
     curr_iter_=0;
     curr_time_=0.0;
     end_pos_2D_=project2plane(end_pos);
+    start_pos_2D_=project2plane(start_pos);
 
     // If the start position can't fit a plane, then the planning_state_ is invalid
     Node* node_origin=fitPlane(start_pos);
@@ -58,7 +60,7 @@ void PFRRTStar::initWithGoal(const Vector3d &start_pos,const Vector3d &end_pos)
             switch(last_planning_state)
             {
                 case Global:
-                    if(last_end_pos_2D==end_pos_2D_ && inheritPath(node_origin,Path::Global))
+                    if((last_end_pos_2D - end_pos_2D_).norm() < 0.1 && inheritPath(node_origin,Path::Global))
                     {
                         inherit_flag=true;
                         delete node_target;node_target=NULL;
@@ -80,7 +82,7 @@ void PFRRTStar::initWithGoal(const Vector3d &start_pos,const Vector3d &end_pos)
             switch(last_planning_state)
             {
                 case Roll:
-                    inherit_flag=(last_end_pos_2D==end_pos_2D_ && inheritPath(node_origin,Path::Sub));
+                    inherit_flag=((last_end_pos_2D - end_pos_2D_).norm() < 0.1 && inheritPath(node_origin,Path::Sub));
                     break;
                 case WithoutGoal:
                     inherit_flag=inheritTree(node_origin);
@@ -102,7 +104,6 @@ void PFRRTStar::initWithGoal(const Vector3d &start_pos,const Vector3d &end_pos)
         node_origin_=node_origin;  
         tree_.push_back(node_origin_);
     }
-    ROS_WARN("tree size: %d", tree_.size());
 
     if(planning_state_==Roll && last_end_pos_2D!=end_pos_2D_) sub_goal_threshold_=1.0f;
 
@@ -746,7 +747,6 @@ Path PFRRTStar::planner(const int &max_iter,const double &max_time)
 
         //Based on the new 2D point,
         Node* new_node = fitPlane(new_point_2D); 
-        ROS_WARN("before tree siez: %d", tree_.size());
 
         if( new_node!=NULL//1.Fail to fit the plane,it will return a null pointer
             &&world_->isInsideBorder(new_node->position_)//2.The position is out of the range of the grid map.
@@ -771,17 +771,14 @@ Path PFRRTStar::planner(const int &max_iter,const double &max_time)
 
             //Add the new node to the tree
             tree_.push_back(new_node);
-            ROS_WARN("after Add");
 
 
             //Rewire the tree to optimize it
             reWire(new_node,neighbor_record); // 加入node_new之后更新树中邻居节点集合中每个节点的cost
-            ROS_WARN("after reWire");
 
 
             //Check if the new node is close enough to the goal
             closeCheck(new_node);
-            ROS_WARN("after closeCheck");
 
 
             if(planning_state_==Global) generatePath();

@@ -61,6 +61,8 @@ class GlobalPlanner  //全局规划类
         ros::Publisher global_path_pub_;
         ros::Publisher marker_pub_box_;
 
+        ros::Publisher a_star_path_pub_;
+
         // 运动模式
         enum MotionState
         {
@@ -129,6 +131,7 @@ class GlobalPlanner  //全局规划类
         void pubInterpolatedPath(const vector<Node*>& solution, ros::Publisher* _path_interpolation_pub);
         void findSolution();
         void callPlanner();
+        void callAStar();
         void pubPathToControl(ros::Publisher* path_to_control_pub);
         void motionModeDetect();
         void returnModeCallback(const std_msgs::String& msg);

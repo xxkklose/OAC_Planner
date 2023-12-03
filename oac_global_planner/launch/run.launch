@@ -8,7 +8,7 @@
   <include file="$(find rslidar_sdk)/launch/start.launch" />
 
   <node pkg="tf" type="static_transform_publisher" name="world_to_camera_init" args="0 0 0 0 0 0 world camera_init 10" />
-  <node pkg="tf" type="static_transform_publisher" name="camera_to_link" args="0 0 -0.1398 0 0 0 aft_mapped base_link 10" />
+  <node pkg="tf" type="static_transform_publisher" name="aft_mapped_to_velodyne" args="0 0 0 0 0 0 aft_mapped velodyne 10" />
 
   <node pkg="waypoint_generator" name="waypoint_generator" type="waypoint_generator">
       <remap from="~goal" to="/goal"/>
