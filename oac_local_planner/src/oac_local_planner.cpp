@@ -24,7 +24,7 @@ LocalPlanner::~LocalPlanner()
 void LocalPlanner::init()
 {
     nh_.param("ros_topic/odom_topic", odom_sub_topic_, std::string("/odom"));
-    nh_.param("ros_topic/local_map_topic", local_map_sub_topic_, std::string("/local_map"));
+    nh_.param("ros_topic/visual_map_topic", local_map_sub_topic_, std::string("/local_map"));
     nh_.param("ros_topic/global_path_topic", global_path_sub_topic_, std::string("/global_path"));
 
     nh_.param("hz", hz_, 10.0);
@@ -78,11 +78,13 @@ void LocalPlanner::init()
 
     robot_state_.velocity_ = 0.0;
     robot_state_.yaw_rate_ = 0.0;
+
+    outputFile.open("/home/beihang705/catkin_mpc/src/OAC_Planner/oac_local_planner/src/trajectory.txt", std::ios::out);
 }
 
 void LocalPlanner::process()
 {
-    ros::Rate rate(hz_);
+    ros::Rate rate(100);
     while(ros::ok())
     {
         /* 1. 订阅全局路径和位姿并设置下一个前进目标 
@@ -103,25 +105,6 @@ void LocalPlanner::process()
            7. 选择评价函数最小的轨迹,并发布cmd_vel
         */ 
         ros::spinOnce();
-
-        // if(!has_test_)
-        // {
-        //     //持续10s发送cmd
-        //     std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-        //     std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-        //     std::chrono::duration<double> time_used = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-        //     while(time_used < std::chrono::duration<double>(15.0))
-        //     {
-        //        t2 = std::chrono::steady_clock::now();
-        //        time_used = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-        //        std::vector<double> velocity_samples = {0.0, 1.0};
-        //        pub_cmd_vel(velocity_samples); 
-        //     }
-        //     pub_cmd_vel({0.0,0.0});
-        //     has_test_ = true;
-        // }   
-        // ROS_WARN("get_global_path_ : %d", get_global_path_ );
-        // ROS_WARN("global_paht_.szie: %d", global_path_.poses.size());
 
         if(!get_global_path_)
             continue;
@@ -146,7 +129,6 @@ void LocalPlanner::process()
             // ROS_WARN("robot_state: %f, %f, %f, %f", robot_state_.x_, robot_state_.y_, robot_state_.z_, robot_state_.yaw_);
 
             double angle_to_goal = cal_2D_direction(Vector3d(robot_state_.x_, robot_state_.y_, robot_state_.z_), next_target_);
-            // ROS_WARN("angle_to_goal: %f", angle_to_goal);
             std::vector<double> velocity_samples = DynamicWindowApproach();
 
             std::cout << "velocity : " << velocity_samples[0] << " yaw_rate : " << velocity_samples[1] << " - Updating\r";
@@ -252,7 +234,7 @@ void LocalPlanner::goalHandler(const geometry_msgs::PoseStamped::ConstPtr& msg)
     goal_quat_.z() = msg->pose.orientation.z;
     goal_quat_.w() = msg->pose.orientation.w;
     has_reached_ = false;
-    // curr_t_ = 0.0;
+    curr_t_ = 0.0;
 }
 
 void LocalPlanner::globalPathHandler(const nav_msgs::Path::ConstPtr& msg)
@@ -332,8 +314,8 @@ double LocalPlanner::cal_point_angle(const Eigen::Vector3d &s_pt, const Eigen::V
 
 bool LocalPlanner::has_reached()
 {
-    Vector3d curr_pos(curr_pose_.pose.position.x, curr_pose_.pose.position.y, curr_pose_.pose.position.z);
-    Vector3d goal(goal_.x(), goal_.y(), goal_.z());
+    Vector2d curr_pos(curr_pose_.pose.position.x, curr_pose_.pose.position.y);
+    Vector2d goal(goal_.x(), goal_.y());
     if((goal - curr_pos).norm() < dist_to_goal_th_)
     {
         return true;
@@ -378,9 +360,13 @@ std::vector<double> LocalPlanner::DynamicWindowApproach()
         double angle_to_goal = angle_path_edge - robot_state_.yaw_;
         while(fabs(angle_to_goal) > M_PI)
         {
-            angle_to_goal > 0 ? angle_to_goal -= M_PI : angle_to_goal += M_PI;
+            angle_to_goal > 0 ? angle_to_goal -= 2 * M_PI : angle_to_goal += 2 * M_PI;
         }
         double yaw_rate = angle_to_goal > 0 ? std::min(angle_to_goal, max_yaw_rate_) : std::max(angle_to_goal, min_yaw_rate_);
+        outputFile << "time: " << ros::Time::now() << " yaw_rate: " << yaw_rate << \
+            " angle_path_edge: " << angle_path_edge << " yaw: " << robot_state_.yaw_ << \
+            " angle_to_goal: " << angle_to_goal << "\n";
+    
         std::vector<State> traj = generate_trajectory(yaw_rate);
         traj_list_.push_back(traj);
         TrajectoryCost temp_cost;
@@ -514,7 +500,7 @@ std::vector<LocalPlanner::State> LocalPlanner::generate_trajectory(const double&
     double angle_to_goal = angle_path_edge - robot_state_.yaw_;
     while(fabs(angle_to_goal) > M_PI)
     {
-        angle_to_goal > 0 ? angle_to_goal -= M_PI : angle_to_goal += M_PI;
+        angle_to_goal > 0 ? angle_to_goal -= 2 * M_PI : angle_to_goal += 2 * M_PI;
     }
     const double predict_time = angle_to_goal / (yaw_rate + DBL_EPSILON); 
     const size_t traj_num = predict_time / dt_;
@@ -552,15 +538,18 @@ double LocalPlanner::cal_clearance(const std::vector<State>& trajectory)
     {
         grid_map::Position position;
         local_map_.getPosition(*iterator, position);
-        if(local_map_.atPosition("elevation_inpainted", position) == NAN)
-            continue;
-        if(local_map_.atPosition("collision", position) == 1.0)
+        if(local_map_.isInside(position))
         {
-            Vector2d temp(state.x_ - position(0), state.y_ - position(1));
-            double dist = temp.norm();
-            if(dist < min_dist)
-                min_dist = dist;
-        } 
+            if(local_map_.atPosition("elevation", position) == NAN)
+                continue;
+            if(local_map_.atPosition("dilatation_barrier", position) == 1.0)
+            {
+                Vector2d temp(state.x_ - position(0), state.y_ - position(1));
+                double dist = temp.norm();
+                if(dist < min_dist)
+                    min_dist = dist;
+            } 
+        }
     }
     // }
 
@@ -599,8 +588,8 @@ void LocalPlanner::pub_cmd_vel(const std::vector<double>& param)
     //                                                         goal_rel_.pose.orientation.x, 
     //                                                         goal_rel_.pose.orientation.y, 
     //                                                         goal_rel_.pose.orientation.z);
-    cmd_vel.linear.x = param[0] * cos(robot_state_.yaw_);
-    cmd_vel.linear.y = param[0] * sin(robot_state_.yaw_);
+    cmd_vel.linear.x = param[0];
+    cmd_vel.linear.y = 0.0; 
     cmd_vel.linear.z = 0.0;
     cmd_vel.angular.x = 0.0;
     cmd_vel.angular.y = 0.0;
@@ -621,7 +610,7 @@ bool LocalPlanner::can_adjust_robot_direction()
     double angle_to_goal = angle_path_edge - robot_state_.yaw_;
     while(fabs(angle_to_goal) > M_PI)
     {
-        angle_to_goal > 0 ? angle_to_goal -= M_PI : angle_to_goal += M_PI;
+        angle_to_goal > 0 ? angle_to_goal -= 2 * M_PI : angle_to_goal += 2 * M_PI;
     }
     if(abs(angle_to_goal) < angle_to_goal_th_)
         return false;
@@ -640,17 +629,20 @@ bool LocalPlanner::check_collision(const std::vector<State>& trajectory)
     for(const auto &state : trajectory)
     {
         grid_map::Position position(state.x_, state.y_);
-        if(local_map_.atPosition("elevation_inpainted", position) == NAN)
-            return true;
-
-        // 周围0.5米内有障碍物
-        for(int i = -3; i < 3; i++)
+        if(local_map_.isInside(position))
         {
-            for(int j = -3; j < 3; j++)
+            if(local_map_.atPosition("elevation", position) == NAN)
+                return true;
+
+            // 周围0.5米内有障碍物
+            for(int i = -3; i < 3; i++)
             {
-                grid_map::Position temp(state.x_ + i * 0.1, state.y_ + j * 0.1);
-                if(local_map_.atPosition("collision", temp) == 1.0)
-                    return true;
+                for(int j = -3; j < 3; j++)
+                {
+                    grid_map::Position temp(state.x_ + i * 0.1, state.y_ + j * 0.1);
+                    if(local_map_.atPosition("dilatation_barrier", temp) == 1.0)
+                        return true;
+                }
             }
         }
     }
@@ -686,7 +678,7 @@ Vector3d LocalPlanner::bezier_curve_derivative(const std::vector<Eigen::Vector3d
 
 std::vector<double> LocalPlanner::BezierCurveApproach()
 {
-    double num_points = 1000;
+    double num_points = 20;
     std::vector<Vector3d> controlPoints;
     for(const auto& pose:global_path_.poses)
     {
@@ -725,7 +717,6 @@ void LocalPlanner::visual()
 
     sensor_msgs::PointCloud2 traj_msg;
     pcl::PointCloud<pcl::PointXYZ> traj_cloud;
-    // ROS_WARN("traj_list size: %d", traj_list_.size());
     for(auto traj:traj_list_)
     {
         for(auto state:traj)
@@ -769,16 +760,6 @@ void LocalPlanner::visual()
             pose.pose.position.x = bezier_curve_points_[i](0);
             pose.pose.position.y = bezier_curve_points_[i](1);
             pose.pose.position.z = bezier_curve_points_[i](2);
-            // Vector3d init_vec = {1.0,0.0,0.0};
-            // Matrix3d rotation = computeRotationMatrix(init_vec, bezier_curve_derivative_[i]);
-            // Eigen::Quaterniond qd(rotation);
-            // if (qd.coeffs().allFinite()) {
-            //     Eigen::Vector4d coeffs = qd.coeffs();
-            //     pose.pose.orientation.w = coeffs[3];
-            //     pose.pose.orientation.x = coeffs[0];
-            //     pose.pose.orientation.y = coeffs[1];
-            //     pose.pose.orientation.z = coeffs[2];
-            // }
             curve_path.poses.push_back(pose);
         }
         curve_path.header.frame_id = "camera_init";

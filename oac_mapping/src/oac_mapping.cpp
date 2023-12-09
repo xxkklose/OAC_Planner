@@ -54,9 +54,17 @@ void Mapping::init()
     lidar_sub_       = nh_.subscribe
         (lidar_sub_topic_,          1, &Mapping::lidarHandler, this);
     
-    map_pub_ = nh_.advertise<grid_map_msgs::GridMap>("map", 1, true);
-    local_map_pub_ = nh_.advertise<grid_map_msgs::GridMap>("local_map", 1, true);
-    lidar_cloud_pub_ = nh_.advertise<grid_map_msgs::GridMap>("lidar_map", 1, true);
+    map_pub_            = nh_.advertise<grid_map_msgs::GridMap>
+        ("map",                     1, true);
+    local_map_pub_      = nh_.advertise<grid_map_msgs::GridMap>
+        ("local_map",               1, true);
+    lidar_cloud_pub_    = nh_.advertise<grid_map_msgs::GridMap>
+        ("lidar_map",               1, true);
+    visual_map_pub_     = nh_.advertise<grid_map_msgs::GridMap>
+        ("visual_map",              1, true);
+    visual_local_map_pub_    = nh_.advertise<grid_map_msgs::GridMap>
+        ("visual_local_map",        1, true);
+
 
 }
 
@@ -70,6 +78,8 @@ void Mapping::process()
             visualMap(map_, map_pub_, "camera_init");
             visualMap(local_map_, local_map_pub_, "camera_init");
             visualMap(lidar_map_, lidar_cloud_pub_, "camera_init");
+            visualMap(visual_map_, visual_map_pub_, "camera_init");
+            visualMap(visual_local_map_, visual_local_map_pub_, "camera_init");
         }
         ros::spinOnce();
         rate.sleep();
@@ -158,7 +168,6 @@ void Mapping::updateMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& point_cloud)
         has_map_ = true;
         has_lidar_map_ = false;
     }
-
 }
 
 void Mapping::updateLidarMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& point_cloud)
@@ -193,25 +202,49 @@ bool Mapping::localMapProcess(const grid_map::Position& local_map_center, const 
 {
     bool flag = false;
     local_map_ = map_.getSubmap(local_map_center, local_map_length, flag);
+    grid_map::Length visual_map_length(20, 20);
+    visual_map_ = lidar_map_.getSubmap(local_map_center, visual_map_length, flag);
+    grid_map::Length visual_local_map_length(10, 10);
+    visual_local_map_ = lidar_map_.getSubmap(local_map_center, visual_local_map_length, flag);
     if(flag)
     {
         local_map_.add("collision", 0.0);
         local_map_.add("dilatation_barrier", 0.0);
+        visual_map_.add("collision", 0.0);
+        visual_map_.add("dilatation_barrier", 0.0);
         for(grid_map::GridMapIterator it(local_map_); !it.isPastEnd(); ++it)
         {
-            if(local_map_.at("elevation", *it) > curr_pos_(2) - 0.2)
+            if(local_map_.at("elevation", *it) > curr_pos_(2) - 0.6)
             {
                 local_map_.at("collision", *it) = 1.0;
             }
         }
+        for(grid_map::GridMapIterator it(visual_map_); !it.isPastEnd(); ++it)
+        {
+            if(visual_map_.at("elevation", *it) > curr_pos_(2) - 0.6)
+            {
+                visual_map_.at("collision", *it) = 1.0;
+            }
+        }
         for(grid_map::GridMapIterator it(local_map_); !it.isPastEnd(); ++it){
             if(local_map_.at("collision", *it) == 1.0){
-                // 把周围半径为0.3m的区域的dilatation_barrier设置为1.0;
+                // 把周围半径为0.35m的区域的dilatation_barrier设置为1.0;
                 grid_map::Position position;
                 local_map_.getPosition(*it, position);
-                for(grid_map::CircleIterator it_circle(local_map_, position, 0.3); !it_circle.isPastEnd(); ++it_circle)
+                for(grid_map::CircleIterator it_circle(local_map_, position, 0.4); !it_circle.isPastEnd(); ++it_circle)
                 {
                     local_map_.at("dilatation_barrier", *it_circle) = 1.0;
+                }
+            } 
+        } 
+        for(grid_map::GridMapIterator it(visual_map_); !it.isPastEnd(); ++it){
+            if(visual_map_.at("collision", *it) == 1.0){
+                // 把周围半径为0.3m的区域的dilatation_barrier设置为1.0;
+                grid_map::Position position;
+                visual_map_.getPosition(*it, position);
+                for(grid_map::CircleIterator it_circle(visual_map_, position, 0.2); !it_circle.isPastEnd(); ++it_circle)
+                {
+                    visual_map_.at("dilatation_barrier", *it_circle) = 1.0;
                 }
             } 
         } 

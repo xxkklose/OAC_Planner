@@ -1,5 +1,6 @@
 #include "oac_global_planner.h"
 #include "Hybrid_A_Star/a_star.hpp"
+#include <algorithm>
 
 using namespace OAC::visualization;
 using namespace OAC::planner;
@@ -18,11 +19,15 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
     nh.param("ros_topic/odom_topic", pose_sub_topic_, std::string("/global_planning_node/robot_pose")); // fast_lio 的位姿
     nh.param("ros_topic/map_topic", map_sub_topic_, std::string("/map")); 
     nh.param("ros_topic/local_map_topic", local_map_sub_topic_, std::string("/local_map")); 
+    nh.param("ros_topic/visual_map_topic", visual_map_sub_topic_, std::string("/visual_map"));
     
     map_sub_                = nh.subscribe
         (map_sub_topic_, 1, &GlobalPlanner::mapCallback, this, ros::TransportHints().tcpNoDelay());
     local_map_sub_          = nh.subscribe
         (local_map_sub_topic_, 1, &GlobalPlanner::localMapCallback, this, ros::TransportHints().tcpNoDelay());
+    visual_map_sub_         = nh.subscribe
+        (visual_map_sub_topic_, 1, &GlobalPlanner::visualMapCallback, this, ros::TransportHints().tcpNoDelay());
+    
     wp_sub_                 = nh.subscribe
         ("waypoints", 1, &GlobalPlanner::rcvWaypointsCallback, this);
     pose_sub_               = nh.subscribe
@@ -122,7 +127,7 @@ void GlobalPlanner::init(ros::NodeHandle& nh)
 void GlobalPlanner::process()
 {
   // std::thread visualization_thread(&GlobalPlanner::visGridMap, gp);
-  ros::Rate rate(10);
+  ros::Rate rate(100);
   while (ros::ok())
   {
     auto spinOnce_start_time = std::chrono::steady_clock::now();
@@ -174,6 +179,13 @@ void GlobalPlanner::localMapCallback(const grid_map_msgs::GridMap& map_msg)
   auto end_time1 = std::chrono::steady_clock::now();
 }
 
+void GlobalPlanner::visualMapCallback(const grid_map_msgs::GridMap& map_msg)
+{
+  auto start_time = std::chrono::steady_clock::now();
+  grid_map::GridMapRosConverter::fromMessage(map_msg, world_->visualMap_);
+  auto end_time1 = std::chrono::steady_clock::now();
+}
+
 // 从rviz中获取得到目标点
 void GlobalPlanner::rcvWaypointsCallback(const nav_msgs::Path& wp)
 {
@@ -204,6 +216,7 @@ void GlobalPlanner::rcvPoseCallback(const nav_msgs::Path& pose)
   // start_pt_ << pose.pose.position.x, pose.pose.position.y, pose.pose.position.z;
   start_pt_ << pose.poses.back().pose.position.x, pose.poses.back().pose.position.y, pose.poses.back().pose.position.z;
   start_pose_ = pose.poses.back();
+  visualBox(start_pose_);
 
   if(motionState_ == SearchMode)
   {
@@ -223,10 +236,10 @@ void GlobalPlanner::rcvPoseCallback(const nav_msgs::Path& pose)
   log_data_.rcv_pose_callback_time = time_consume.count();
 }
 
-void GlobalPlanner::returnModeCallback(const std_msgs::String& msg)
+void GlobalPlanner::returnModeCallback(const std_msgs::Bool& msg)
 {
-  if(msg.data == "true") motionState_ = ReturnMode;
-  else if(msg.data == "false") motionState_ = SearchMode;
+  if(msg.data) motionState_ = ReturnMode;
+  else motionState_ = SearchMode;
 }
 
 /**
@@ -523,7 +536,8 @@ void GlobalPlanner::motionModeDetect()
     keyPointDebug_ << "提取到的关键点坐标为： x: " << target_point.x << "  y: " << target_point.y << "  z: " << target_point.z << "\n"; 
     Vector3d temp_pt(target_point.x, target_point.y, target_point.z);
     target_pt_ = Vector3d(target_point.x, target_point.y, target_point.z);
-    if((target_pt_ - start_pt_).norm() < 0.3)
+    has_goal_ = true;
+    if((target_pt_ - start_pt_).norm() < 0.5)
     {
       keyPoints_->points.erase(keyPoints_->points.begin() + indices[0]);
       keyPointDebug_ << "在kdtree中清除了该关键点" << "\n";
@@ -593,38 +607,39 @@ void GlobalPlanner::exit()
 
 void GlobalPlanner::callAStar()
 {
-  AStar* a_star = new AStar();
+  AStar a_star;
   if(!world_->has_map_ || !has_goal_)
     return;
-  bool init_flag = a_star->initParam(world_->subMap_, 0.08, start_pt_, target_pt_);
-  if(!init_flag)
+  bool init_flag = a_star.initParam(world_->visualMap_, 0.08, start_pt_, target_pt_);
+  ROS_WARN("start_pt_: %f, %f, %f;  target_pt_: %f, %f, %f", start_pt_(0), start_pt_(1), start_pt_(2), target_pt_(0), target_pt_(1), target_pt_(2));
+  ROS_INFO("init_flag: %d", init_flag);
+  if(init_flag)
   {
-    delete a_star;
-    return;
+    a_star.process();
+    vector<Vector3d> path = a_star.returnPath();
+    reverse(path.begin(), path.end());
+    ROS_WARN("path.size: %d", path.size());
+    if(path.size() != 0 && EuclideanDistance(start_pt_, target_pt_) > goal_thre_)
+    {
+      // 可视化路径
+      nav_msgs::Path path_to_control_msg;
+      path_to_control_msg.header.frame_id = "camera_init";
+      path_to_control_msg.header.stamp = ros::Time::now();
+      for (size_t i = 0; i < path.size(); i++)
+      {
+        geometry_msgs::PoseStamped pose; 
+        pose.header.frame_id = "camera_init";
+        pose.header.stamp = ros::Time::now();
+        pose.pose.position.x = path[i](0);
+        pose.pose.position.y = path[i](1);
+        pose.pose.position.z = path[i](2);
+        path_to_control_msg.poses.push_back(pose);
+      }
+      a_star_path_pub_.publish(path_to_control_msg);
+    }else if(path.size() != 0 && EuclideanDistance(start_pt_, target_pt_) < goal_thre_)
+    {
+      has_goal_ = false;
+      ROS_INFO("The Robot has achieved the goal!!!");
+    }
   }
-  a_star->process();
-  ROS_WARN("A* process finished");
-  vector<Vector3f> path = a_star->returnPath();
-  ROS_WARN("A* path size: %d", path.size());
-  if(path.size() == 0)
-  {
-    delete a_star;
-    return; 
-  }
-  // 可视化路径
-  nav_msgs::Path path_to_control_msg;
-  path_to_control_msg.header.frame_id = "camera_init";
-  path_to_control_msg.header.stamp = ros::Time::now();
-  for (size_t i = 0; i < path.size(); i++)
-  {
-    geometry_msgs::PoseStamped pose; 
-    pose.header.frame_id = "camera_init";
-    pose.header.stamp = ros::Time::now();
-    pose.pose.position.x = path[i](0);
-    pose.pose.position.y = path[i](1);
-    pose.pose.position.z = path[i](2);
-    path_to_control_msg.poses.push_back(pose);
-  }
-  a_star_path_pub_.publish(path_to_control_msg);
-  delete a_star;
 }

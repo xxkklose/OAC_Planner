@@ -21,6 +21,8 @@
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
 
+#include <fstream>
+
 class LocalPlanner{
     public:
         LocalPlanner();
@@ -241,4 +243,7 @@ class LocalPlanner{
         std::vector<std::vector<State>> traj_list_;
         std::vector<State> best_traj_;
         sensor_msgs::PointCloud2 ob_cloud_;
+
+        std::ofstream outputFile;
+
 };

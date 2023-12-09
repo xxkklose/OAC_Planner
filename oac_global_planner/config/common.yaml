@@ -7,8 +7,9 @@ ros_topic:
   
   map_topic: /mapping_node/map
   local_map_topic: /mapping_node/local_map
+  visual_map_topic: /mapping_node/visual_map
   # global_path_topic: /global_planning_node/global_path
   global_path_topic: /global_planning_node/a_star_path
 
 
-plane_bottom: -0.66
+plane_bottom: -0.73

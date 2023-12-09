@@ -61,6 +61,8 @@ private:
     ros::Publisher map_pub_;
     ros::Publisher local_map_pub_;
     ros::Publisher lidar_cloud_pub_;
+    ros::Publisher visual_map_pub_;
+    ros::Publisher visual_local_map_pub_;
 
     std::string odom_sub_topic_;
     std::string point_cloud_sub_topic_;
@@ -75,6 +77,8 @@ private:
     grid_map::GridMap map_;
     grid_map::GridMap local_map_;
     grid_map::GridMap lidar_map_;
+    grid_map::GridMap visual_map_;
+    grid_map::GridMap visual_local_map_;
     filters::FilterChain<grid_map::GridMap> filter_chain_{"grid_map::GridMap"};
 
     bool has_lidar_map_ = false;

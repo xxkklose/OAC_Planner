@@ -223,6 +223,7 @@ public:
     std::vector<std::vector<std::vector<bool>>> grid_map_; //TODO：还有用吗
     grid_map::GridMap gridMap_;
     grid_map::GridMap subMap_;
+    grid_map::GridMap visualMap_;
     
     std::vector<Eigen::Vector3i> effect_grid_;
 

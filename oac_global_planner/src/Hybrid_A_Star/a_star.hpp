@@ -10,7 +10,6 @@
 #include <grid_map_ros/grid_map_ros.hpp>
 #include <grid_map_msgs/GridMap.h>
 #include "tic_toc.h"
-
 #include <fstream>
 
 using namespace std;
@@ -68,12 +67,52 @@ struct TreeNode
     }
 };
 
-TreeNode* node_map[250][250];
 
 class AStar
 {    
 
 public:
+    AStar(){
+        start_node_ = new TreeNode();
+        goal_node_ = new TreeNode();
+    }
+
+    ~AStar() {
+        // ROS_INFO("AStar delete begin");
+        // if(start_node_ != nullptr)
+        // {
+        //     try{
+        //         delete start_node_;
+        //     }catch(exception e){
+        //         ROS_ERROR("delete start_node_ error");
+        //     }
+        // }
+        // if(goal_node_ != nullptr)
+        // {
+        //     try{
+        //         delete goal_node_;
+        //     }catch(exception e){
+        //         ROS_ERROR("delete start_node_ error");
+        //     }
+        // }
+
+        // for(int i = 0; i < 250; i++){
+        //     for(int j = 0; j < 250; j++){
+        //         if(node_map[i][j] != nullptr)
+        //         {
+        //             try{
+        //                 delete node_map[i][j];
+        //                 node_map[i][j] = nullptr;
+        //             }catch(exception e){
+        //                 ROS_ERROR("delete start_node_ error");
+        //             }
+        //         }
+        //     }
+        // }
+        // ROS_INFO("AStar delete");
+    }
+
+
     bool initParam(const grid_map::GridMap& map, double resolution, Vector3d start, Vector3d goal){
         map_ = map;
         AStar_resolution = resolution;
@@ -108,22 +147,34 @@ public:
             start_node_->isVisited = true;
             start_node_->x_index = 124;
             start_node_->y_index = 124;
-            open_list_.clear();
             open_list_.insert(make_pair(start_node_->f, start_node_));
+            // for(int i = 0; i < 250; i++){
+            //     for(int j = 0; j < 250; j++){
+            //         node_map[i][j] = new TreeNode();
+            //         node_map[i][j]->x = start_position.x() + (i - 124) * AStar_resolution;
+            //         node_map[i][j]->y = start_position.y() - (j - 124) * AStar_resolution;
+            //         node_map[i][j]->x_index = i;
+            //         node_map[i][j]->y_index = j;
+            //     }
+            // }
             for(int i = 0; i < 250; i++){
+                vector<TreeNode*> temp_row;
                 for(int j = 0; j < 250; j++){
-                    node_map[i][j] = new TreeNode();
-                    node_map[i][j]->x = start_position.x() + (i - 124) * AStar_resolution;
-                    node_map[i][j]->y = start_position.y() - (j - 124) * AStar_resolution;
-                    node_map[i][j]->x_index = i;
-                    node_map[i][j]->y_index = j;
+                    TreeNode* temp = new TreeNode();
+                    temp->x = start_position.x() + (i - 124) * AStar_resolution;
+                    temp->y = start_position.y() - (j - 124) * AStar_resolution;
+                    temp->x_index = i;
+                    temp->y_index = j;
+                    temp_row.push_back(temp);
                 }
+                node_map.push_back(temp_row);
             }
 
 
             int start_index_x = (start_node_->x - start_node_->x) / AStar_resolution;
             int start_index_y = (start_node_->y - start_node_->y) / AStar_resolution;
-            TreeNode* start_node = node_map[start_index_x + 124][start_index_y + 124];
+            // TreeNode* start_node = node_map[start_index_x + 124][start_index_y + 124];
+            TreeNode* start_node = node_map[124][124];
         }
         return true;
     }
@@ -135,11 +186,7 @@ public:
         int curr_index_x = 124;
         int curr_index_y = 124;
 
-        while(!open_list_.empty()){
-            // if(t.toc() > 1000){
-            //     break;
-            // }
-
+        while(!open_list_.empty() && t.toc() < 1e4){
             current_node = open_list_.begin()->second;
             current_node->isVisited = true;
             curr_index_x = current_node->x_index;
@@ -185,15 +232,15 @@ public:
         }
     }
 
-    vector<Vector3f> returnPath(){
-        vector<Vector3f> path;
+    vector<Vector3d> returnPath(){
+        vector<Vector3d> path;
         TreeNode* current_node = goal_node_;
         while(current_node != NULL){
             grid_map::Position position(current_node->x, current_node->y);
             if(map_.isInside(position) == false){
                 continue;
             }
-            path.push_back(Vector3f(current_node->x, current_node->y, map_.atPosition("elevation", position) + 0.68));
+            path.push_back(Vector3d(current_node->x, current_node->y, map_.atPosition("elevation", position) + 0.68));
             current_node = current_node->parent;
         }
         outputFile.close();
@@ -215,8 +262,11 @@ private:
     grid_map::GridMap map_;
 
     std::multimap<double, TreeNode*> open_list_;
+    // TreeNode* node_map[250][250];
+    vector<vector<TreeNode*>> node_map;
 
-    TreeNode* start_node_ = new TreeNode();
-    TreeNode* goal_node_ = new TreeNode();
+
+    TreeNode* start_node_ = nullptr;
+    TreeNode* goal_node_ = nullptr;
 };
 

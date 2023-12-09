@@ -8,6 +8,7 @@
 #include <nav_msgs/Path.h>
 #include <std_msgs/Float32MultiArray.h>
 #include <std_msgs/String.h>
+#include <std_msgs/Bool.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -46,11 +47,12 @@ class GlobalPlanner  //全局规划类
         std::ofstream logFile_;
 
         // ros related 激光点云地图、中间点、位姿、返回模式、对齐模式
-        ros::Subscriber map_sub_, local_map_sub_, wp_sub_, pose_sub_, returnMode_sub_, alignMode_sub_;
+        ros::Subscriber map_sub_, local_map_sub_, visual_map_sub_, wp_sub_, pose_sub_, returnMode_sub_, alignMode_sub_;
         
         std::string pose_sub_topic_;
         std::string map_sub_topic_;
         std::string local_map_sub_topic_;
+        std::string visual_map_sub_topic_;
 
         ros::Publisher grid_map_vis_pub_;
         ros::Publisher path_vis_pub_;
@@ -123,6 +125,7 @@ class GlobalPlanner  //全局规划类
         void process();
         void mapCallback(const grid_map_msgs::GridMap& map_msg);
         void localMapCallback(const grid_map_msgs::GridMap& map_msg);
+        void visualMapCallback(const grid_map_msgs::GridMap& map_msg);
         void rcvWaypointsCallback(const nav_msgs::Path& wp);
         void rcvPoseCallback(const nav_msgs::Path& pose);
         void removeGlobalPathPoints(Path& solution);
@@ -134,7 +137,7 @@ class GlobalPlanner  //全局规划类
         void callAStar();
         void pubPathToControl(ros::Publisher* path_to_control_pub);
         void motionModeDetect();
-        void returnModeCallback(const std_msgs::String& msg);
+        void returnModeCallback(const std_msgs::Bool& msg);
         void visualBox(const geometry_msgs::PoseStamped& pose);
         void plotLog();
         void exit();

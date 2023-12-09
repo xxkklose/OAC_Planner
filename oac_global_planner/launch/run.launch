@@ -33,7 +33,7 @@
 
   <node pkg="oac_local_planner" type="oac_local_planner_node" name="local_planning_node" output="screen" required="true">
       <rosparam command="load" file="$(find oac_global_planner)/config/common.yaml"/>
-      <rosparam command="load" file="$(find oac_global_planner)/config/param.yaml"/>
+      <rosparam command="load" file="$(find oac_local_planner)/config/local_planner_param.yaml"/>
   </node>
 
   <!-- <node pkg="gpr" type="gpr_path" name="gpr_path" output="screen" required="true">
